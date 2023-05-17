@@ -40,8 +40,22 @@ contract HedgeyCliffVesting is ERC721Delegate, ReentrancyGuard {
   mapping(uint256 => Cliff[]) public cliffs;
 
   //events
-  event NFTCreated(uint256 indexed id, address indexed recipient, address indexed token, uint256[] amounts, uint256[] unlocks, address vestingAdmin, uint256 unlockDate);
-  event NFTRedeemed(uint256 indexed id, uint256 redemption, uint256 cliffsRedeemed, uint256 remainder, uint256 remainingCliffs);
+  event NFTCreated(
+    uint256 indexed id,
+    address indexed recipient,
+    address indexed token,
+    uint256[] amounts,
+    uint256[] unlocks,
+    address vestingAdmin,
+    uint256 unlockDate
+  );
+  event NFTRedeemed(
+    uint256 indexed id,
+    uint256 redemption,
+    uint256 cliffsRedeemed,
+    uint256 remainder,
+    uint256 remainingCliffs
+  );
   event NFTRevoked(uint256 indexed id, uint256 redemption, uint256 remainder);
   event URISet(string newURI);
   event AdminDeleted(address _admin);
@@ -72,7 +86,6 @@ contract HedgeyCliffVesting is ERC721Delegate, ReentrancyGuard {
     delete admin;
     emit AdminDeleted(msg.sender);
   }
-
 
   function createNFT(
     address recipient,
@@ -212,7 +225,7 @@ contract HedgeyCliffVesting is ERC721Delegate, ReentrancyGuard {
     // takes current block time, looks up all of the indexes to find how many are in the future
     Timelock memory tl = timelocks[tokenId];
     if (tl.unlockDate > block.timestamp) {
-        return (0, 0);
+      return (0, 0);
     }
     for (uint16 i = tl.remainingCliffs; i > 0; i--) {
       Cliff memory cliff = cliffs[tokenId][i - 1];
@@ -229,6 +242,17 @@ contract HedgeyCliffVesting is ERC721Delegate, ReentrancyGuard {
   function delegateTokens(address delegate, uint256[] memory tokenIds) external {
     for (uint256 i; i < tokenIds.length; i++) {
       _delegateToken(delegate, tokenIds[i]);
+    }
+  }
+
+  /// @dev this function is to delegate all NFTs to another wallet address
+  /// it pulls any tokens of the owner and delegates the NFT to the delegate address
+  /// @param delegate is the address of the delegate
+  function delegateAllNFTs(address delegate) external {
+    uint256 balance = balanceOf(msg.sender);
+    for (uint256 i; i < balance; i++) {
+      uint256 tokenId = _tokenOfOwnerByIndex(msg.sender, i);
+      _delegateToken(delegate, tokenId);
     }
   }
 

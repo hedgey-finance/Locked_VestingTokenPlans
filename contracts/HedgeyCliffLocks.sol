@@ -32,8 +32,20 @@ contract HedgeyCliffLocks is ERC721Delegate, ReentrancyGuard {
   mapping(uint256 => Cliff[]) public cliffs;
 
   //events
-  event NFTCreated(uint256 indexed id, address indexed recipient, address indexed token, uint256[] amounts, uint256[] unlocks);
-  event NFTRedeemed(uint256 indexed id, uint256 redemption, uint256 cliffsRedeemed, uint256 remainder, uint256 remainingCliffs);
+  event NFTCreated(
+    uint256 indexed id,
+    address indexed recipient,
+    address indexed token,
+    uint256[] amounts,
+    uint256[] unlocks
+  );
+  event NFTRedeemed(
+    uint256 indexed id,
+    uint256 redemption,
+    uint256 cliffsRedeemed,
+    uint256 remainder,
+    uint256 remainingCliffs
+  );
   event URISet(string newURI);
   event AdminDeleted(address _admin);
 
@@ -74,7 +86,7 @@ contract HedgeyCliffLocks is ERC721Delegate, ReentrancyGuard {
     require(unlocks < tl.remainingCliffs, 'total redemption');
     uint256 redemption;
     for (uint16 i = tl.remainingCliffs; i > tl.remainingCliffs - unlocks; i--) {
-      Cliff memory cliff = cliffs[tokenId][i-1];
+      Cliff memory cliff = cliffs[tokenId][i - 1];
       require(cliff.unlock < block.timestamp && cliff.amount > 0);
       // if cliff is in the past, unlockable, add amount to redemption
       redemption += cliff.amount;
@@ -92,7 +104,6 @@ contract HedgeyCliffLocks is ERC721Delegate, ReentrancyGuard {
       _redeemNFT(msg.sender, tokenIds[i]);
     }
   }
-
 
   function _redeemNFT(address holder, uint256 tokenId) internal {
     require(ownerOf(tokenId) == holder);
@@ -118,13 +129,11 @@ contract HedgeyCliffLocks is ERC721Delegate, ReentrancyGuard {
     emit NFTRedeemed(tokenId, redemption, rc, timelocks[tokenId].remainder, timelocks[tokenId].remainingCliffs);
   }
 
-  
-
   function redeemableBalance(uint256 tokenId) public view returns (uint256 balance, uint16 redeemableCliffs) {
     // takes current block time, looks up all of the indexes to find how many are in the future
     uint16 remainingCliffs = timelocks[tokenId].remainingCliffs;
     for (uint16 i = remainingCliffs; i > 0; i--) {
-      Cliff memory cliff = cliffs[tokenId][i-1];
+      Cliff memory cliff = cliffs[tokenId][i - 1];
       if (cliff.unlock < block.timestamp && cliff.amount > 0) {
         balance += cliff.amount;
         redeemableCliffs++;
@@ -141,6 +150,16 @@ contract HedgeyCliffLocks is ERC721Delegate, ReentrancyGuard {
     }
   }
 
+  /// @dev this function is to delegate all NFTs to another wallet address
+  /// it pulls any tokens of the owner and delegates the NFT to the delegate address
+  /// @param delegate is the address of the delegate
+  function delegateAllNFTs(address delegate) external {
+    uint256 balance = balanceOf(msg.sender);
+    for (uint256 i; i < balance; i++) {
+      uint256 tokenId = _tokenOfOwnerByIndex(msg.sender, i);
+      _delegateToken(delegate, tokenId);
+    }
+  }
 
   /// @dev lockedBalances is a function that will enumerate all of the tokens of a given holder, and aggregate those balances up
   /// this is useful for snapshot voting and other view methods to see the total balances of a given user for a single token
