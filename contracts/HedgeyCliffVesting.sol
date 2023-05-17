@@ -40,11 +40,39 @@ contract HedgeyCliffVesting is ERC721Delegate, ReentrancyGuard {
   mapping(uint256 => Cliff[]) public cliffs;
 
   //events
+  event NFTCreated(uint256 indexed id, address indexed recipient, address indexed token, uint256[] amounts, uint256[] unlocks, address vestingAdmin, uint256 unlockDate);
+  event NFTRedeemed(uint256 indexed id, uint256 redemption, uint256 cliffsRedeemed, uint256 remainder, uint256 remainingCliffs);
+  event NFTRevoked(uint256 indexed id, uint256 redemption, uint256 remainder);
+  event URISet(string newURI);
+  event AdminDeleted(address _admin);
 
   constructor(string memory name, string memory symbol, address _nftLocker) ERC721(name, symbol) {
     admin = msg.sender;
     nftLocker = _nftLocker;
   }
+
+  /// @dev internal function used by the standard ER721 function tokenURI to retrieve the baseURI privately held to visualize and get the metadata
+  function _baseURI() internal view override returns (string memory) {
+    return baseURI;
+  }
+
+  /// @notice function to set the base URI after the contract has been launched, only the admin can call
+  /// @param _uri is the new baseURI for the metadata
+  function updateBaseURI(string memory _uri) external {
+    require(msg.sender == admin, 'SV01');
+    baseURI = _uri;
+    uriSet = true;
+    emit URISet(_uri);
+  }
+
+  /// @notice function to delete the admin once the uri has been set
+  function deleteAdmin() external {
+    require(msg.sender == admin, 'SV01');
+    require(uriSet, 'not set');
+    delete admin;
+    emit AdminDeleted(msg.sender);
+  }
+
 
   function createNFT(
     address recipient,
@@ -84,6 +112,7 @@ contract HedgeyCliffVesting is ERC721Delegate, ReentrancyGuard {
     timelocks[tokenId].remainingCliffs -= unlocks;
     timelocks[tokenId].remainder -= redemption;
     TransferHelper.withdrawTokens(tl.token, msg.sender, redemption);
+    emit NFTRedeemed(tokenId, redemption, unlocks, timelocks[tokenId].remainder, timelocks[tokenId].remainingCliffs);
   }
 
   function redeemNFTs(uint256[] memory tokenIds) external nonReentrant {
@@ -125,6 +154,7 @@ contract HedgeyCliffVesting is ERC721Delegate, ReentrancyGuard {
     TransferHelper.transferTokens(token, msg.sender, address(this), total);
     timelocks[newTokenId] = Timelock(token, total, uint16(unlocks.length), vestingAdmin, unlockDate);
     _safeMint(recipient, newTokenId);
+    emit NFTCreated(newTokenId, recipient, token, amounts, unlocks, vestingAdmin, unlockDate);
   }
 
   function _redeemNFT(address holder, uint256 tokenId) internal {
@@ -148,6 +178,7 @@ contract HedgeyCliffVesting is ERC721Delegate, ReentrancyGuard {
       require(cliffs[tokenId].length == timelocks[tokenId].remainingCliffs, 'safety check');
     }
     TransferHelper.withdrawTokens(tl.token, holder, redemption);
+    emit NFTRedeemed(tokenId, redemption, rc, timelocks[tokenId].remainder, timelocks[tokenId].remainingCliffs);
   }
 
   function _revokeNFT(address vestingAdmin, uint256 tokenId) internal {
@@ -172,7 +203,9 @@ contract HedgeyCliffVesting is ERC721Delegate, ReentrancyGuard {
       } else {
         TransferHelper.withdrawTokens(tl.token, holder, redemption);
       }
+      emit NFTRedeemed(tokenId, redemption, rc, 0, 0);
     }
+    emit NFTRevoked(tokenId, redemption, unvestedBalance);
   }
 
   function redeemableBalance(uint256 tokenId) public view returns (uint256 balance, uint16 redeemableCliffs) {
