@@ -23,6 +23,7 @@ contract HedgeyCliffLocksV2 is ERC721Delegate, ReentrancyGuard {
     uint256 firstCliffAmount;
     uint256 cliffAmount;
     uint16 remainingCliffs;
+    address vestingAdmin;
   }
 
   mapping(uint256 => Timelock) public timelocks;
@@ -36,7 +37,8 @@ contract HedgeyCliffLocksV2 is ERC721Delegate, ReentrancyGuard {
     uint256 totalAmount,
     uint256 firstCliffAmount,
     uint256 cliffAmount,
-    uint16 totalCliffs
+    uint16 totalCliffs,
+    address vestingAdmin
   );
   event NFTRedeemed(
     uint256 indexed id,
@@ -57,17 +59,27 @@ contract HedgeyCliffLocksV2 is ERC721Delegate, ReentrancyGuard {
     address token,
     uint256 firstCliffAmount,
     uint256 cliffAmount,
-    uint256[] memory unlocks
+    uint256[] memory unlocks,
+    address vestingAdmin
   ) external nonReentrant {
     require(checkMint(recipient, firstCliffAmount, cliffAmount, unlocks));
     _tokenIds.increment();
     uint256 newTokenId = _tokenIds.current();
     uint256 total = firstCliffAmount + cliffAmount * (unlocks.length - 1);
     TransferHelper.transferTokens(token, msg.sender, address(this), total);
-    timelocks[newTokenId] = Timelock(token, total, firstCliffAmount, cliffAmount, uint16(unlocks.length));
+    timelocks[newTokenId] = Timelock(token, total, firstCliffAmount, cliffAmount, uint16(unlocks.length), vestingAdmin);
     cliffs[newTokenId] = unlocks;
     _safeMint(recipient, newTokenId);
-    emit NFTCreated(newTokenId, recipient, token, total, firstCliffAmount, cliffAmount, uint16(unlocks.length));
+    emit NFTCreated(
+      newTokenId,
+      recipient,
+      token,
+      total,
+      firstCliffAmount,
+      cliffAmount,
+      uint16(unlocks.length),
+      vestingAdmin
+    );
   }
 
   function createNFTBatch(
@@ -76,6 +88,7 @@ contract HedgeyCliffLocksV2 is ERC721Delegate, ReentrancyGuard {
     uint256[] memory firstCliffAmounts,
     uint256[] memory cliffAmounts,
     uint256[][] memory unlocksArr,
+    address vestingAdmin,
     uint256 sumTotal
   ) external nonReentrant {
     require(recipients.length == firstCliffAmounts.length, 'AR01');
@@ -95,7 +108,8 @@ contract HedgeyCliffLocksV2 is ERC721Delegate, ReentrancyGuard {
         total,
         firstCliffAmounts[i],
         cliffAmounts[i],
-        uint16(unlocksArr[i].length)
+        uint16(unlocksArr[i].length),
+        vestingAdmin
       );
       cliffs[newTokenId] = unlocksArr[i];
       _safeMint(recipients[i], newTokenId);
@@ -107,7 +121,8 @@ contract HedgeyCliffLocksV2 is ERC721Delegate, ReentrancyGuard {
         total,
         firstCliffAmounts[i],
         cliffAmounts[i],
-        uint16(unlocksArr[i].length)
+        uint16(unlocksArr[i].length),
+        vestingAdmin
       );
     }
     require(amountCheck == sumTotal, 'total error');
@@ -184,6 +199,37 @@ contract HedgeyCliffLocksV2 is ERC721Delegate, ReentrancyGuard {
     }
     TransferHelper.withdrawTokens(tl.token, holder, redemption);
     emit NFTRedeemed(tokenId, redemption, unlocks, remainder, remCliff);
+  }
+
+  function revokeNFTs(uint256[] memory tokenIds) external nonReentrant {
+    for (uint8 i; i < tokenIds.length; i++) {
+      _revokeNFT(msg.sender, tokenIds[i]);
+    }
+  }
+
+  function _revokeNFT(address vestingAdmin, uint256 tokenId) internal {
+    Timelock memory tl = timelocks[tokenId];
+    require(tl.vestingAdmin == vestingAdmin, '!vADMIN');
+    uint256 unlocks = getAvailableUnlocks(tokenId);
+    require(unlocks < tl.remainingCliffs, 'nothing to revoke');
+    uint256 firstCliff = tl.firstCliffAmount;
+    uint256 redemption;
+    uint16 remCliff = tl.remainingCliffs;
+    if (unlocks > 0) {
+      for (uint16 i = remCliff; i > remCliff - unlocks; i--) {
+        if (firstCliff > 0) {
+          redemption += firstCliff;
+          firstCliff = 0;
+        } else {
+          redemption += tl.cliffAmount;
+        }
+      }
+    }
+    uint256 remainder = tl.remainder - redemption;
+    delete timelocks[tokenId];
+    delete cliffs[tokenId];
+    TransferHelper.withdrawTokens(tl.token, ownerOf(tokenId), redemption);
+    TransferHelper.withdrawTokens(tl.token, vestingAdmin, remainder);
   }
 
   /// @dev function to delegate specific tokens to another wallet for voting
