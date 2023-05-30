@@ -42,6 +42,7 @@ module.exports = {
   E18_10000: BigNumber.from(10).pow(18).mul(10000), // 1000e18
   E18_1000000: BigNumber.from(10).pow(18).mul(1000000),
   ZERO_ADDRESS: '0x0000000000000000000000000000000000000000',
+  DAY: BigNumber.from(60).mul(60).mul(24),
   bigMin,
   randomBigNum,
   getVal,
