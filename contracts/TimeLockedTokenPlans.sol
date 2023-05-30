@@ -108,8 +108,7 @@ contract TimeLockedTokenPlans is ERC721Enumerable, ReentrancyGuard {
   /// @param cliff is an optional paramater to allow a future single cliff date where tokens will be unlocked.
   /// If the start date of unlock is prior to the cliff, then on the cliff anything unlocked from the start will immediately be unlocekd at the cliffdate
   /// @param rate is the rate tokens are continuously unlocked, over the interval period.
-  /// @param period is a regular frequency with which tokens unlock on a defined interval period, using seconds, but will typically represent 30 days, or 90 days. 
-
+  /// @param period is a regular frequency with which tokens unlock on a defined interval period, using seconds, but will typically represent 30 days, or 90 days.
 
   function createPlan(
     address recipient,
@@ -125,9 +124,9 @@ contract TimeLockedTokenPlans is ERC721Enumerable, ReentrancyGuard {
     require(amount > 0, '03');
     require(rate > 0, '04');
     require(rate <= amount, '05');
-    _tokenIds.increment();
+    _planIds.increment();
     uint256 newPlanId = _planIds.current();
-    uint256 end = TimelockLibrary.endDate(start, amount, rate, interval);
+    uint256 end = TimelockLibrary.endDate(start, amount, rate, period);
     require(cliff <= end, 'SV12');
     TransferHelper.transferTokens(token, msg.sender, address(this), amount);
     plans[newPlanId] = Plan(token, amount, start, cliff, rate, period);
@@ -139,40 +138,33 @@ contract TimeLockedTokenPlans is ERC721Enumerable, ReentrancyGuard {
     require(ownerOf(planId) == msg.sender);
     Plan memory plan = plans[planId];
     VotingVault vault = new VotingVault(plan.token, msg.sender);
-    tokenVaults[tokenId] = address(tv);
-    TransferHelper.withdrawTokens(timelock.token, address(tv), timelock.amount);
-    //event emitted
+    votingVaults[planId] = address(vault);
+    TransferHelper.withdrawTokens(plan.token, address(vault), plan.amount);
+    emit VotingVaultCreated(planId, address(vault));
   }
 
   function delegatePlanTokens(uint256 planId, address delegatee) external {
-    require(ownerOf(tokenId) == msg.sender);
-    address vault = tokenVaults[tokenId];
-    require(tokenVaults[tokenId] != address(0), 'no vault setup');
-    TokenVault(vault).delegateTokens(delegatee);
+    require(ownerOf(planId) == msg.sender);
+    address vault = votingVaults[planId];
+    require(votingVaults[planId] != address(0), 'no vault setup');
+    VotingVault(vault).delegateTokens(delegatee);
   }
 
-  /// @notice function to redeem a single or multiple NFT timelocks
-  /// @param tokenIds is an array of tokens that are passed in to be redeemed
   function redeemPlans(uint256[] memory planIds) external nonReentrant {
     _redeemPlans(planIds);
   }
 
-  /// @notice function to claim for all of my owned NFTs
-  /// @dev pulls the balance and uses the enumerate function to redeem each NFT based on their index id
-  /// this function will not revert if there is no balance, it will simply redeem all NFTs owned by the msg.sender that have a balance
   function redeemAllPlans() external nonReentrant {
     uint256 balance = balanceOf(msg.sender);
     uint256[] memory planIds = new uint256[](balance);
     for (uint256 i; i < balance; i++) {
       //check the balance of the vest first
-      uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
+      uint256 planId = tokenOfOwnerByIndex(msg.sender, i);
       planIds[i] = planId;
     }
     _redeemPlans(planIds);
   }
 
-  /// @dev function to redeem the multiple NFTs
-  /// @dev internal method used for the redeemNFT and redeemAllNFTs to process multiple and avoid reentrancy
   function _redeemPlans(uint256[] memory planIds) internal {
     for (uint256 i; i < planIds.length; i++) {
       (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planIds[i], block.timestamp);
@@ -180,33 +172,36 @@ contract TimeLockedTokenPlans is ERC721Enumerable, ReentrancyGuard {
     }
   }
 
-  /// @dev internal redeem function that performs all of the necessary checks, updates to storage and transfers of tokens to the NFT holder
-  /// @param holder is the owner of the NFT, the msg.sender from the external calls
-  /// @param tokenId is the id of the NFT
-  function _redeemPlan(address holder, uint256 planId, uint256 balance, uint256 remainder, uint256 latestUnlock) internal {
+  function _redeemPlan(
+    address holder,
+    uint256 planId,
+    uint256 balance,
+    uint256 remainder,
+    uint256 latestUnlock
+  ) internal {
     require(ownerOf(planId) == holder, '!holder');
-    Plan storage plan = plans[planId];
-    address vault = tokenVaults[planId];
-    address token = plan.token;
+    Plan memory plan = plans[planId];
+    address vault = votingVaults[planId];
     if (balance == plan.amount) {
-      delete plan;
-      delete tokenVaults[planId];
+      delete plans[planId];
+      delete votingVaults[planId];
       _burn(planId);
     } else {
-      plan.amount = remainder;
-      plan.start = latestUnlock;
+      plans[planId].amount = remainder;
+      plans[planId].start = latestUnlock;
     }
-    if(vault == address(0)) {
-        TransferHelper.withdrawTokens(token, holder, balance);
+    if (vault == address(0)) {
+      TransferHelper.withdrawTokens(plan.token, holder, balance);
     } else {
-        VotingVault(vault).withdrawTokens(balance, holder);
+      VotingVault(vault).withdrawTokens(holder, balance);
     }
     emit PlanTokensUnlocked(planId, balance, remainder, latestUnlock);
   }
 
-  /// @dev funtion to get the current balance and remainder of a given timelock, using the current block time
-  /// @param tokenId is the NFT token ID
-  function planBalanceOf(uint256 planId, uint256 timeStamp) public view returns (uint256 balance, uint256 remainder, uint256 latestUnlock) {
+  function planBalanceOf(
+    uint256 planId,
+    uint256 timeStamp
+  ) public view returns (uint256 balance, uint256 remainder, uint256 latestUnlock) {
     Plan memory plan = plans[planId];
     (balance, remainder, latestUnlock) = TimelockLibrary.balanceAtTime(
       plan.start,
@@ -218,12 +213,8 @@ contract TimeLockedTokenPlans is ERC721Enumerable, ReentrancyGuard {
     );
   }
 
-  /// @dev function to calculate the end date in seconds of a given unlock timelock
-  /// @param tokenId is the NFT token ID
   function planEnd(uint256 planId) external view returns (uint256 end) {
     Plan memory plan = plans[planId];
     end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
   }
-
- 
 }

@@ -7,7 +7,7 @@ library TimelockLibrary {
   }
 
   function endDate(uint256 start, uint256 amount, uint256 rate, uint256 period) internal pure returns (uint256 end) {
-    end = (amount % rate == 0) ? (amount / rate) * period + start : (amount / rate) * interval + start + period;
+    end = (amount % rate == 0) ? (amount / rate) * period + start : ((amount / rate) * period + 1) + start;
   }
 
   function totalPeriods(uint256 rate, uint256 amount) internal pure returns (uint256 periods) {
@@ -24,7 +24,7 @@ library TimelockLibrary {
   ) internal pure returns (uint256 unlockedBalance, uint256 lockedBalance, uint256 unlockTime) {
     if (start > time || cliffDate > time) {
       lockedBalance = amount;
-      latestPeriodTime = start;
+      unlockTime = start;
     } else {
       // should take into account rounding because there are no decimals allowed
       uint256 periodsElapsed = (time - start) / period;
