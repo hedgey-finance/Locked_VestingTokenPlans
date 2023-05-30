@@ -3,10 +3,11 @@ pragma solidity 0.8.20;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
-import './ERC721Delegate/ERC721Delegate.sol';
+import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import './libraries/TransferHelper.sol';
 import './libraries/TimelockLibrary.sol';
+import './VotingVault.sol';
 
 /**
  * @title An NFT representation of ownership of time locked tokens that unlock continuously per second
@@ -16,7 +17,7 @@ import './libraries/TimelockLibrary.sol';
  * @author alex michelsen aka icemanparachute
  */
 
-contract TimeLockedNFT is ERC721Delegate, ReentrancyGuard {
+contract TimeLockedVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
 
@@ -26,6 +27,8 @@ contract TimeLockedNFT is ERC721Delegate, ReentrancyGuard {
   bool private uriSet;
   /// @dev admin for setting the baseURI;
   address internal admin;
+
+  mapping(uint256 => address) internal votingVaults;
 
   /// @dev the timelock is the storage in a struct of the tokens that are currently being timelocked
   /// @dev token is the token address being timelocked
@@ -62,6 +65,7 @@ contract TimeLockedNFT is ERC721Delegate, ReentrancyGuard {
   /// if the remainder == 0 then it is a full redemption and the NFT is burned, otherwise it is a partial redemption
   event PlanTokensUnlocked(uint256 indexed id, uint256 amountClaimed, uint256 planRemainder, uint256 resetDate);
 
+  event VotingVaultCreated(uint256 indexed id, address vaultAddress);
   /// @notice event for when a new URI is set for the NFT metadata linking
   event URISet(string newURI);
 
@@ -130,18 +134,20 @@ contract TimeLockedNFT is ERC721Delegate, ReentrancyGuard {
     emit PlanCreated(newPlanId, recipient, token, amount, start, cliff, end, rate, period);
   }
 
-  function delegateTokens(address delegate, uint256[] memory planId) external {
-    for (uint256 i; i < planId.length; i++) {
-      _delegateToken(delegate, planId[i]);
-    }
+  function setupVoting(uint256 planId) external {
+    require(ownerOf(planId) == msg.sender);
+    Plan memory plan = plans[planId];
+    VotingVault vault = new VotingVault(plan.token, msg.sender);
+    votingVaults[planId] = address(vault);
+    TransferHelper.withdrawTokens(plan.token, address(vault), plan.amount);
+    emit VotingVaultCreated(planId, address(vault));
   }
 
-  function delegateAllNFTs(address delegate) external {
-    uint256 balance = balanceOf(msg.sender);
-    for (uint256 i; i < balance; i++) {
-      uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
-      _delegateToken(delegate, planId);
-    }
+  function delegatePlanTokens(uint256 planId, address delegatee) external {
+    require(ownerOf(planId) == msg.sender);
+    address vault = votingVaults[planId];
+    require(votingVaults[planId] != address(0), 'no vault setup');
+    VotingVault(vault).delegateTokens(delegatee);
   }
 
   function redeemPlans(uint256[] memory planIds) external nonReentrant {
@@ -175,14 +181,20 @@ contract TimeLockedNFT is ERC721Delegate, ReentrancyGuard {
   ) internal {
     require(ownerOf(planId) == holder, '!holder');
     Plan memory plan = plans[planId];
+    address vault = votingVaults[planId];
     if (balance == plan.amount) {
       delete plans[planId];
+      delete votingVaults[planId];
       _burn(planId);
     } else {
       plans[planId].amount = remainder;
       plans[planId].start = latestUnlock;
     }
-    TransferHelper.withdrawTokens(plan.token, holder, balance);
+    if (vault == address(0)) {
+      TransferHelper.withdrawTokens(plan.token, holder, balance);
+    } else {
+      VotingVault(vault).withdrawTokens(holder, balance);
+    }
     emit PlanTokensUnlocked(planId, balance, remainder, latestUnlock);
   }
 
@@ -204,27 +216,5 @@ contract TimeLockedNFT is ERC721Delegate, ReentrancyGuard {
   function planEnd(uint256 planId) external view returns (uint256 end) {
     Plan memory plan = plans[planId];
     end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
-  }
-
-  function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
-    uint256 holdersBalance = balanceOf(holder);
-    for (uint256 i; i < holdersBalance; i++) {
-      uint256 planId = _tokenOfOwnerByIndex(holder, i);
-      Plan memory plan = plans[planId];
-      if (token == plan.token) {
-        lockedBalance += plan.amount;
-      }
-    }
-  }
-
-  function delegatedBalances(address delegate, address token) external view returns (uint256 delegatedBalance) {
-    uint256 delegateBalance = balanceOfDelegate(delegate);
-    for (uint256 i; i < delegateBalance; i++) {
-      uint256 planId = tokenOfDelegateByIndex(delegate, i);
-      Plan memory plan = plans[planId];
-      if (token == plan.token) {
-        delegatedBalance += plan.amount;
-      }
-    }
   }
 }

@@ -3,21 +3,23 @@ pragma solidity 0.8.20;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
-import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
+import './ERC721Delegate/ERC721Delegate.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import './libraries/TransferHelper.sol';
 import './libraries/TimelockLibrary.sol';
-import './VotingVault.sol';
+import './interfaces/ITimeLockedNFT.sol';
 
 /**
- * @title An NFT representation of ownership of time locked tokens that unlock continuously per second
- * @notice The time locked tokens are redeemable by the owner of the NFT
+ * @title An NFT representation of ownership of time vesting tokens that vest continuously per second
+ * @notice The time vesting tokens are redeemable by the owner of the NFT
+ * @notice each NFT has a vestingAdmin that can revoke the NFT and pull and unvested tokens back to it at any time
+ * @notice this bound NFT collection cannot be transferred
  * @notice it uses the Enumerable extension to allow for easy lookup to pull balances of one account for multiple NFTs
  * it also uses a new ERC721 Delegate contract that allows users to delegate their NFTs to other wallets for the purpose of voting
  * @author alex michelsen aka icemanparachute
  */
 
-contract TimeVestingTokenPlans is ERC721Enumerable, ReentrancyGuard {
+contract TimeVestingTokenPlans is ERC721Delegate, ReentrancyGuard {
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
 
@@ -139,20 +141,18 @@ contract TimeVestingTokenPlans is ERC721Enumerable, ReentrancyGuard {
     emit PlanCreated(newPlanId, recipient, token, amount, start, cliff, end, rate, period, vestingAdmin);
   }
 
-  function setupVoting(uint256 planId) external {
-    require(ownerOf(planId) == msg.sender);
-    Plan memory plan = plans[planId];
-    VotingVault vault = new VotingVault(plan.token, msg.sender);
-    votingVaults[planId] = address(vault);
-    TransferHelper.withdrawTokens(plan.token, address(vault), plan.amount);
-    emit VotingVaultCreated(planId, address(vault));
+  function delegateTokens(address delegate, uint256[] memory planId) external {
+    for (uint256 i; i < planId.length; i++) {
+      _delegateToken(delegate, planId[i]);
+    }
   }
 
-  function delegatePlanTokens(uint256 planId, address delegatee) external {
-    require(ownerOf(planId) == msg.sender);
-    address vault = votingVaults[planId];
-    require(votingVaults[planId] != address(0), '!vault');
-    VotingVault(vault).delegateTokens(delegatee);
+  function delegateAllNFTs(address delegate) external {
+    uint256 balance = balanceOf(msg.sender);
+    for (uint256 i; i < balance; i++) {
+      uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
+      _delegateToken(delegate, planId);
+    }
   }
 
   /// @notice function to redeem a single or multiple NFT timelocks
@@ -189,15 +189,8 @@ contract TimeVestingTokenPlans is ERC721Enumerable, ReentrancyGuard {
     address holder = ownerOf(planId);
     delete plans[planId];
     _burn(planId);
-    address vault = votingVaults[planId];
-    if (vault == address(0)) {
-      TransferHelper.withdrawTokens(plan.token, vestingAdmin, remainder);
-      TransferHelper.withdrawTokens(plan.token, holder, balance);
-    } else {
-      delete votingVaults[planId];
-      VotingVault(vault).withdrawTokens(vestingAdmin, remainder);
-      VotingVault(vault).withdrawTokens(holder, balance);
-    }
+    TransferHelper.withdrawTokens(plan.token, vestingAdmin, remainder);
+    TransferHelper.withdrawTokens(plan.token, holder, balance);
     emit PlanRevoked(planId, balance, remainder);
   }
 
@@ -222,20 +215,14 @@ contract TimeVestingTokenPlans is ERC721Enumerable, ReentrancyGuard {
   ) internal {
     require(ownerOf(planId) == holder, '!holder');
     Plan memory plan = plans[planId];
-    address vault = votingVaults[planId];
     if (balance == plan.amount) {
       delete plans[planId];
-      delete votingVaults[planId];
       _burn(planId);
     } else {
       plans[planId].amount = remainder;
       plans[planId].start = latestUnlock;
     }
-    if (vault == address(0)) {
-      TransferHelper.withdrawTokens(plan.token, holder, balance);
-    } else {
-      VotingVault(vault).withdrawTokens(holder, balance);
-    }
+    TransferHelper.withdrawTokens(plan.token, holder, balance);
     emit PlanTokensUnlocked(planId, balance, remainder, latestUnlock);
   }
 
@@ -261,6 +248,28 @@ contract TimeVestingTokenPlans is ERC721Enumerable, ReentrancyGuard {
   function planEnd(uint256 planId) external view returns (uint256 end) {
     Plan memory plan = plans[planId];
     end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
+  }
+
+  function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
+    uint256 holdersBalance = balanceOf(holder);
+    for (uint256 i; i < holdersBalance; i++) {
+      uint256 planId = _tokenOfOwnerByIndex(holder, i);
+      Plan memory plan = plans[planId];
+      if (token == plan.token) {
+        lockedBalance += plan.amount;
+      }
+    }
+  }
+
+  function delegatedBalances(address delegate, address token) external view returns (uint256 delegatedBalance) {
+    uint256 delegateBalance = balanceOfDelegate(delegate);
+    for (uint256 i; i < delegateBalance; i++) {
+      uint256 planId = tokenOfDelegateByIndex(delegate, i);
+      Plan memory plan = plans[planId];
+      if (token == plan.token) {
+        delegatedBalance += plan.amount;
+      }
+    }
   }
 
   /// @dev these NFTs cannot be transferred
