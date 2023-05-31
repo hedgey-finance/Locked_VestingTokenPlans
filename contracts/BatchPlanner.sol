@@ -83,7 +83,7 @@ contract BatchPlanner {
     }
   }
 
-  function batchLinearPlan(address locker, address token, uint256 totalAmount, Plan[] memory plans) external {
+  function batchLinearLockup(address locker, address token, uint256 totalAmount, Plan[] memory plans) external {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
     SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
     for (uint16 i; i < plans.length; i++) {
@@ -98,7 +98,7 @@ contract BatchPlanner {
     }
   }
 
-  function batchLinearPlan(
+  function batchLinearVesting(
     address locker,
     address token,
     uint256 totalAmount,

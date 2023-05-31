@@ -68,6 +68,8 @@ module.exports = (vesting, voting, params) => {
     } else {
       await batcher.batchLockingPlans(hedgey.address, token.address, totalAmount, batch, period);
     }
+    let linearVester = s.vester.address;
+    await batcher.batchLinearVesting(linearVester, token.address, totalAmount, batch, admin.address);
   });
   it('batch mints on the linear vesting for comparison', async () => {
     let linear = await setupLinear();
