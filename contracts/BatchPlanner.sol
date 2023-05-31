@@ -17,7 +17,7 @@ interface ILinearLock {
 }
 
 interface ILinearVester {
-    function createNFT(
+  function createNFT(
     address recipient,
     address token,
     uint256 amount,
@@ -29,11 +29,6 @@ interface ILinearVester {
 }
 
 contract BatchPlanner {
-  address public lockedPlans;
-  address public vestingPlans;
-  address public linearLocker;
-  address public linearVester;
-
   struct Plan {
     address recipient;
     uint256 amount;
@@ -42,18 +37,17 @@ contract BatchPlanner {
     uint256 rate;
   }
 
-  constructor(address _lockedPlans, address _vestingPlans, address _linearLocker, address _linearVester) {
-    lockedPlans = _lockedPlans;
-    vestingPlans = _vestingPlans;
-    linearLocker = _linearLocker;
-    linearVester = _linearVester;
-  }
-
-  function batchLockingPlans(address token, uint256 totalAmount, Plan[] memory plans, uint256 period) external {
+  function batchLockingPlans(
+    address locker,
+    address token,
+    uint256 totalAmount,
+    Plan[] memory plans,
+    uint256 period
+  ) external {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
-    SafeERC20.safeIncreaseAllowance(IERC20(token), lockedPlans, totalAmount);
+    SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
     for (uint16 i; i < plans.length; i++) {
-      ILockedTokenPlans(lockedPlans).createPlan(
+      ILockedTokenPlans(locker).createPlan(
         plans[i].recipient,
         token,
         plans[i].amount,
@@ -66,6 +60,7 @@ contract BatchPlanner {
   }
 
   function batchVestingPlans(
+    address locker,
     address token,
     uint256 totalAmount,
     Plan[] memory plans,
@@ -73,9 +68,9 @@ contract BatchPlanner {
     address vestingAdmin
   ) external {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
-    SafeERC20.safeIncreaseAllowance(IERC20(token), vestingPlans, totalAmount);
+    SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
     for (uint16 i; i < plans.length; i++) {
-      IVestingTokenPlans(vestingPlans).createPlan(
+      IVestingTokenPlans(locker).createPlan(
         plans[i].recipient,
         token,
         plans[i].amount,
@@ -88,11 +83,11 @@ contract BatchPlanner {
     }
   }
 
-  function batchLinearPlan(address token, uint256 totalAmount, Plan[] memory plans) external {
+  function batchLinearPlan(address locker, address token, uint256 totalAmount, Plan[] memory plans) external {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
-    SafeERC20.safeIncreaseAllowance(IERC20(token), linearLocker, totalAmount);
+    SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
     for (uint16 i; i < plans.length; i++) {
-      ILinearLock(linearLocker).createNFT(
+      ILinearLock(locker).createNFT(
         plans[i].recipient,
         token,
         plans[i].amount,
@@ -103,11 +98,17 @@ contract BatchPlanner {
     }
   }
 
-  function batchLinearPlan(address token, uint256 totalAmount, Plan[] memory plans, address vestingAdmin) external {
+  function batchLinearPlan(
+    address locker,
+    address token,
+    uint256 totalAmount,
+    Plan[] memory plans,
+    address vestingAdmin
+  ) external {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
-    SafeERC20.safeIncreaseAllowance(IERC20(token), linearVester, totalAmount);
+    SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
     for (uint16 i; i < plans.length; i++) {
-      ILinearVester(linearVester).createNFT(
+      ILinearVester(locker).createNFT(
         plans[i].recipient,
         token,
         plans[i].amount,

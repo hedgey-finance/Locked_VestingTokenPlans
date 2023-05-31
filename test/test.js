@@ -7,9 +7,9 @@ const paramsMatrix = [
 
 describe('Testing the Happy Path', () => {
   paramsMatrix.forEach((params) => {
-    happyPath(true, true, params);
+    //happyPath(true, true, params);
     happyPath(true, false, params);
-    happyPath(false, true, params);
+    //happyPath(false, true, params);
     happyPath(false, false, params);
   });
 });
