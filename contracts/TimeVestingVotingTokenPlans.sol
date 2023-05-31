@@ -263,6 +263,17 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
     end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
   }
 
+  function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
+    uint256 holdersBalance = balanceOf(holder);
+    for (uint256 i; i < holdersBalance; i++) {
+      uint256 planId = tokenOfOwnerByIndex(holder, i);
+      Plan memory plan = plans[planId];
+      if (token == plan.token) {
+        lockedBalance += plan.amount;
+      }
+    }
+  }
+
   /// @dev these NFTs cannot be transferred
   function _transfer(address from, address to, uint256 tokenId) internal virtual override {
     revert('Not transferrable');

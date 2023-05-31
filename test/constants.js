@@ -14,8 +14,37 @@ const randomBigNum = (base, max, min) => {
 
 const getVal = (amount) => {
   return ethers.utils.formatEther(amount);
-}
+};
 
+const planEnd = (start, amount, rate, period) => {
+  const end = amount % rate == 0 ? (amount / rate) * period + start : (amount / rate) * period + 1 + start;
+  return end;
+};
+
+const totalPeriods = (rate, amount) => {
+  return amount / rate;
+};
+
+const balanceAtTime = (start, cliff, amount, rate, period, timestamp) => {
+  let lockedBalance = 0;
+  let unlockedBalance = 0;
+  let unlockTime = 0;
+  if (start > timestamp || cliff > timestamp) {
+    lockedBalance = amount;
+    unlockTime = start;
+  } else {
+    const periodsElapsed = (time - start) / period;
+    const calculatedBalance = periodsElapsed * rate;
+    unlockedBalance = Math.min(calculatedBalance, amount);
+    lockedBalance = amount - unlockedBalance;
+    unlockTime = start + period * periodsElapsed;
+    return {
+      unlockedBalance,
+      lockedBalance,
+      unlockTime,
+    };
+  }
+};
 module.exports = {
   ZERO: BigNumber.from(0),
   ONE: BigNumber.from(1),
@@ -46,4 +75,7 @@ module.exports = {
   bigMin,
   randomBigNum,
   getVal,
+  planEnd,
+  totalPeriods,
+  balanceAtTime,
 };

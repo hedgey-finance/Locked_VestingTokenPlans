@@ -7,7 +7,6 @@ import './ERC721Delegate/ERC721Delegate.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import './libraries/TransferHelper.sol';
 import './libraries/TimelockLibrary.sol';
-import './interfaces/ITimeLockedNFT.sol';
 
 /**
  * @title An NFT representation of ownership of time vesting tokens that vest continuously per second
