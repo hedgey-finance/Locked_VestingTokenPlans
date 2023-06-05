@@ -2,36 +2,62 @@ const { ethers } = require('hardhat');
 const C = require('./constants');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
-module.exports = async () => {
+const setup = async () => {
     const [admin, a, b, c, d] = await ethers.getSigners();
-    const CliffLock = await ethers.getContractFactory('HedgeyCliffLocks');
-    const CliffVest = await ethers.getContractFactory('HedgeyCliffVesting');
-    const MasterBatcher = await ethers.getContractFactory('MasterBatcher');
-    const V2 = await ethers.getContractFactory('HedgeyCliffLocksV2');
-    const Streamer = await ethers.getContractFactory('StreamVestingNFT');
+    const Locked = await ethers.getContractFactory('TimeLockedTokenPlans');
+    const locked = await Locked.deploy('TimeLock', 'TL');
+    const VoteLocked = await ethers.getContractFactory('TimeLockedVotingTokenPlans');
+    const voteLocked = await VoteLocked.deploy('TimeLock', 'TL');
+    const Vest = await ethers.getContractFactory('TimeVestingTokenPlans');
+    const vest = await Vest.deploy('TimeLock', 'TL');
+    const VoteVest = await ethers.getContractFactory('TimeVestingVotingTokenPlans');
+    const voteVest = await VoteVest.deploy('TimeLock', 'TL');
+    const BatchPlanner = await ethers.getContractFactory('BatchPlanner');
+    const Vester = await ethers.getContractFactory('StreamVestingNFT');
+    const vester = await Vester.deploy('Vester', 'VST', locked.address, locked.address);
+    const batcher = await BatchPlanner.deploy();
     const Token = await ethers.getContractFactory('Token');
-    const cl = await CliffLock.deploy('CliffLockedHedgeys', 'CLHD');
-    const cv = await CliffVest.deploy('CliffVestingHedgeys', 'CVHD', cl.address);
-    const v2 = await V2.deploy('CliffV2', 'CV2');
-    const batcher = await MasterBatcher.deploy();
-    const streamer = await Streamer.deploy('Streamer', 'STMY', cl.address, cl.address);
     const token = await Token.deploy(C.E18_1000000, 'Token', 'TK');
-    await token.approve(cl.address, C.E18_1000000);
-    await token.approve(cv.address, C.E18_1000000);
-    await token.approve(batcher.address, C.E18_1000000);
-    await token.approve(v2.address, C.E18_1000000);
-    await token.approve(streamer.address, C.E18_1000000);
     return {
         admin,
         a,
         b,
         c,
         d,
-        cl,
-        cv,
+        locked,
+        voteLocked,
+        vest,
+        vester,
+        voteVest,
         batcher,
         token,
-        v2,
-        streamer,
     }
+}
+
+const setupLinear = async () => {
+    const [admin, a, b, c, d] = await ethers.getSigners();
+    const Streamer = await ethers.getContractFactory('StreamingNFT');
+    const Vester = await ethers.getContractFactory('StreamVestingNFT');
+    const BatchVester = await ethers.getContractFactory('BatchVester');
+    const batchVester = await BatchVester.deploy();
+    const streamer = await Streamer.deploy('Streamers', 'STMY');
+    const vester = await Vester.deploy('Vester', 'VST', streamer.address, streamer.address);
+    const Token = await ethers.getContractFactory('Token');
+    const token = await Token.deploy(C.E18_1000000, 'Token', 'TK');
+    return {
+        admin,
+        a,
+        b,
+        c,
+        d,
+        streamer,
+        vester,
+        batchVester,
+        token,
+    }
+}
+
+module.exports = {
+    setup,
+    setupLinear,
 }

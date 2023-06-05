@@ -1,70 +1,90 @@
 const { expect } = require('chai');
-const setup = require('../fixtures');
+const { setup, setupLinear }  = require('../fixtures');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const C = require('../constants');
 const { BigNumber } = require('ethers');
 const { ethers } = require('hardhat');
 
-module.exports = (vesting, params) => {
-  let s, admin, a, b, c, d, hedgey, batcher, token;
-  let amounts, cliffs, unlockDate, total;
-  it(`Mints a cliff ${vesting ? 'vesting' : 'locked'} token NFT`, async () => {
+module.exports = (vesting, voting, params) => {
+  let s, admin, a, b, c, d, hedgey, token;
+  let amount, start, cliff, period, rate, end;
+  it(`Creates a ${vesting ? 'vesting' : 'locked'} ${voting ? 'voting' : 'not voting'} token plan`, async () => {
     s = await setup();
-    hedgey = vesting ? s.cv : s.cl;
+    if (vesting && voting) hedgey = s.voteVest;
+    else if (!vesting && voting) hedgey = s.voteLocked;
+    else if (vesting && !voting) hedgey = s.vest;
+    else hedgey = s.locked;
     admin = s.admin;
     a = s.a;
     b = s.b;
     c = s.c;
     d = s.d;
-    batcher = s.batcher;
     token = s.token;
+    await token.approve(hedgey.address, C.E18_1000000);
     let now = await time.latest();
-    amounts = params.amounts;
-    total = C.ZERO;
-    params.amounts.forEach((amount) => {
-      total = total.add(amount);
-    });
-    unlockDate = params.unlockShift + now;
-    cliffs = [];
-    params.timeShifts.forEach((timeShift) => {
-      cliffs.push(now + timeShift);
-    });
+    amount = params.amount;
+    period = params.period;
+    rate = params.rate;
+    start = params.start + now;
+    cliff = params.cliff + now;
+    end = C.planEnd(start, amount, rate, period);
     if (vesting) {
-      expect(await hedgey.createNFT(a.address, token.address, amounts, cliffs, admin.address))
-        .to.emit('NFTCreated')
-        .withArgs('1', a.address, token.address, amounts, cliffs, admin.address, '0');
+      expect(await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address))
+        .to.emit('PlanCreated')
+        .withArgs('1', a.address, token.address, amount, start, cliff, end, rate, period, admin.address);
     } else {
-      expect(await hedgey.createNFT(a.address, token.address, amounts, cliffs))
-        .to.emit('NFTCreated')
-        .withArgs('1', a.address, token.address, amounts, cliffs);
+      expect(await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period))
+        .to.emit('PlanCreated')
+        .withArgs('1', a.address, token.address, amount, start, cliff, end, rate, period);
     }
-    let timelock = await hedgey.timelocks('1');
-    expect(timelock.token).to.eq(token.address);
-    expect(timelock.remainder).to.eq(total);
-    expect(timelock.remainingCliffs).to.eq(cliffs.length);
-    for (let i = 0; i < cliffs.length; i++) {
-      let cliff = await hedgey.cliffs('1', i);
-      expect(cliff.amount).to.eq(amounts[i]);
-      expect(cliff.unlock).to.eq(cliffs[i]);
+    expect(await token.balanceOf(hedgey.address)).to.eq(amount);
+    expect(await hedgey.ownerOf('1')).to.eq(a.address);
+    expect(await hedgey.balanceOf(a.address)).to.eq(1);
+    const plan = await hedgey.plans('1');
+    expect(plan.token).to.eq(token.address);
+    expect(plan.amount).to.eq(amount);
+    expect(plan.start).to.eq(start);
+    expect(plan.rate).to.eq(rate);
+    expect(plan.period).to.eq(period);
+    expect(plan.cliff).to.eq(cliff);
+    if (vesting) expect(plan.vestingAdmin).to.eq(admin.address);
+    expect(await hedgey.lockedBalances(a.address, token.address)).to.eq(amount);
+  });
+  it(`batch creates several ${vesting ? 'vesting' : 'lockup'} ${voting ? 'voting' : 'not voting'} plans`, async () => {
+    const batcher = s.batcher;
+    await token.approve(batcher.address, C.E18_1000000);
+    let singlePlan = {
+      recipient: a.address,
+      amount,
+      start,
+      cliff,
+      rate
     }
+    const batchSize = 80;
+    let totalAmount = amount.mul(batchSize);
+    let batch = Array(batchSize).fill(singlePlan);
+    if (vesting) {
+      await batcher.batchVestingPlans(hedgey.address, token.address, totalAmount, batch, period, admin.address);
+    } else {
+      await batcher.batchLockingPlans(hedgey.address, token.address, totalAmount, batch, period);
+    }
+    let linearVester = s.vester.address;
+    await batcher.batchLinearVesting(linearVester, token.address, totalAmount, batch, admin.address);
   });
-  it('redeems the entire NFT', async () => {
-    await time.increase(params.timeShifts[0] + 1);
-    await hedgey.connect(a).redeemNFTs(['1']);
-  });
-  it(`mints a token on the v2 contract with ${vesting ? 'vesting' : 'locked'}`, async () => {
-    let v2 = s.v2;
-    let firstCliff = C.E18_1000;
-    let cliffAmt = C.E18_100;
-    let total = cliffAmt.mul(cliffs.length - 1).add(firstCliff);
-    expect(await v2.createNFT(a.address, token.address, firstCliff, cliffAmt, cliffs))
-      .to.emit('NFTCreated')
-      .withArgs('1', a.address, token.address, total, firstCliff, cliffAmt, cliffs.length);
-    await v2.connect(a).redeemNFT('1', cliffs.length);
-  });
-  it('mints a streamvesting token', async () => {
-    let streamer = s.streamer;
-    let now = await time.latest();
-    await streamer.createNFT(a.address, token.address, C.E18_1000, now, now, C.E18_1, admin.address);
+  it('batch mints on the linear vesting for comparison', async () => {
+    let linear = await setupLinear();
+    admin = linear.admin;
+    a = linear.a;
+    token = linear.token;
+    const vester = linear.vester;
+    let batcher = linear.batchVester;
+    await token.approve(batcher.address, C.E18_1000000);
+    const batchSize = 80;
+    let recipients = Array(batchSize).fill(a.address);
+    let amounts = Array(batchSize).fill(amount);
+    let starts = Array(batchSize).fill(start);
+    let cliffs = Array(batchSize).fill(cliff);
+    let rates = Array(batchSize).fill(rate);
+    await batcher.createBatch(vester.address, recipients, token.address, amounts, starts, cliffs, rates, admin.address);
   })
 };
