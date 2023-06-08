@@ -165,6 +165,12 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
     _redeemPlans(planIds);
   }
 
+  function partialRedeemPlan(uint256 planId, uint256 timestamp) external nonReentrant {
+    (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planId, timestamp);
+    require(balance > 0, 'nothing to redeem');
+    _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
+  }
+
   function _redeemPlans(uint256[] memory planIds) internal {
     for (uint256 i; i < planIds.length; i++) {
       (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planIds[i], block.timestamp);
@@ -209,6 +215,7 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
       plan.amount,
       plan.rate,
       plan.period,
+      block.timestamp,
       timeStamp
     );
   }

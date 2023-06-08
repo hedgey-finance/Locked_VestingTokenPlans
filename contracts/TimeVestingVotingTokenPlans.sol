@@ -44,6 +44,7 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
     uint256 rate;
     uint256 period;
     address vestingAdmin;
+    bool adminTransferOBO;
   }
 
   /// @dev a mapping of the NFT tokenId from _tokenIds to the timelock structs to locate in storage
@@ -60,7 +61,8 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
     uint256 end,
     uint256 rate,
     uint256 period,
-    address vestingAdmin
+    address vestingAdmin,
+    bool adminTransferOBO
   );
 
   /// @notice event when the NFT is redeemed, there are two redemption types, partial and full redemption
@@ -74,6 +76,10 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
   event URISet(string newURI);
 
   event AdminDeleted(address _admin);
+
+  event VestingPlanAdminChanged(uint256 indexed id, address _newVestingAdmin);
+
+  event PlanTransferredByVestingAdmin(uint256 indexed id, address indexed from, address indexed to);
 
   /// @notice the constructor function has two params:
   /// @param name is the name of the collection of NFTs
@@ -104,6 +110,14 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
     emit AdminDeleted(msg.sender);
   }
 
+
+  function changeVestingPlanAdmin(uint256 planId, address newVestingAdmin) external {
+    Plan storage plan = plans[planId];
+    require(msg.sender == plan.vestingAdmin, '!vestingAdmin');
+    plan.vestingAdmin = newVestingAdmin;
+    emit VestingPlanAdminChanged(planId, newVestingAdmin);
+  }
+
   /// @notice createPlan function is the function to mint a new NFT and simultaneously create a time locked timelock of tokens
   /// @param recipient is the recipient of the NFT. It can be the self minted to oneself, or minted to a different address than the caller of this function
   /// @param token is the token address of the tokens that will be locked inside the timelock
@@ -122,7 +136,8 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
     uint256 cliff,
     uint256 rate,
     uint256 period,
-    address vestingAdmin
+    address vestingAdmin,
+    bool adminTransferOBO
   ) external nonReentrant {
     require(recipient != address(0), '01');
     require(token != address(0), '02');
@@ -134,9 +149,9 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
     uint256 end = TimelockLibrary.endDate(start, amount, rate, period);
     require(cliff <= end, 'SV12');
     TransferHelper.transferTokens(token, msg.sender, address(this), amount);
-    plans[newPlanId] = Plan(token, amount, start, cliff, rate, period, vestingAdmin);
+    plans[newPlanId] = Plan(token, amount, start, cliff, rate, period, vestingAdmin, adminTransferOBO);
     _safeMint(recipient, newPlanId);
-    emit PlanCreated(newPlanId, recipient, token, amount, start, cliff, end, rate, period, vestingAdmin);
+    emit PlanCreated(newPlanId, recipient, token, amount, start, cliff, end, rate, period, vestingAdmin, adminTransferOBO);
   }
 
   function setupVoting(uint256 planId) external {
@@ -173,6 +188,12 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
       planIds[i] = planId;
     }
     _redeemPlans(planIds);
+  }
+
+  function partialRedeemPlan(uint256 planId, uint256 timestamp) external nonReentrant {
+    (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planId, timestamp);
+    require(balance > 0, 'nothing to redeem');
+    _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
   }
 
   function revokePlans(uint256[] memory planIds) external nonReentrant {
@@ -252,6 +273,7 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
       plan.amount,
       plan.rate,
       plan.period,
+      block.timestamp,
       timeStamp
     );
   }
@@ -274,8 +296,14 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, ReentrancyGuard {
     }
   }
 
-  /// @dev these NFTs cannot be transferred
-  function _transfer(address from, address to, uint256 tokenId) internal virtual override {
+  function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721) {
+    require(plans[tokenId].adminTransferOBO, 'not transferable by vesting admin');
+    require(msg.sender == plans[tokenId].vestingAdmin, 'not vesting Admin');
+    _transfer(from, to, tokenId);
+    emit PlanTransferredByVestingAdmin(tokenId, from, to);
+  }
+
+  function _safeTransfer(address from, address to, uint256 tokenId, bytes memory data) internal override {
     revert('Not transferrable');
   }
 }

@@ -159,9 +159,15 @@ contract TimeLockedTokenPlans is ERC721Delegate, ReentrancyGuard {
     _redeemPlans(planIds);
   }
 
+  function partialRedeemPlan(uint256 planId, uint256 redemptionTime) external nonReentrant {
+    (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planId, block.timestamp, redemptionTime);
+    require(balance > 0, 'nothing to redeem');
+    _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
+  }
+
   function _redeemPlans(uint256[] memory planIds) internal {
     for (uint256 i; i < planIds.length; i++) {
-      (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planIds[i], block.timestamp);
+      (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planIds[i], block.timestamp, block.timestamp);
       if (balance > 0) _redeemPlan(msg.sender, planIds[i], balance, remainder, latestUnlock);
     }
   }
@@ -188,7 +194,8 @@ contract TimeLockedTokenPlans is ERC721Delegate, ReentrancyGuard {
 
   function planBalanceOf(
     uint256 planId,
-    uint256 timeStamp
+    uint256 timeStamp,
+    uint256 redemptionTime
   ) public view returns (uint256 balance, uint256 remainder, uint256 latestUnlock) {
     Plan memory plan = plans[planId];
     (balance, remainder, latestUnlock) = TimelockLibrary.balanceAtTime(
@@ -197,7 +204,8 @@ contract TimeLockedTokenPlans is ERC721Delegate, ReentrancyGuard {
       plan.amount,
       plan.rate,
       plan.period,
-      timeStamp
+      timeStamp,
+      redemptionTime
     );
   }
 

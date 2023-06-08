@@ -10,6 +10,7 @@ interface IVestingTokenPlans {
     uint256 cliff,
     uint256 rate,
     uint256 period,
-    address vestingAdmin
+    address vestingAdmin,
+    bool adminTransferOBO
   ) external;
 }

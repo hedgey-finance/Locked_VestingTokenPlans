@@ -65,7 +65,8 @@ contract BatchPlanner {
     uint256 totalAmount,
     Plan[] memory plans,
     uint256 period,
-    address vestingAdmin
+    address vestingAdmin,
+    bool adminTransferOBO
   ) external {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
     SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
@@ -78,7 +79,8 @@ contract BatchPlanner {
         plans[i].cliff,
         plans[i].rate,
         period,
-        vestingAdmin
+        vestingAdmin,
+        adminTransferOBO
       );
     }
   }
