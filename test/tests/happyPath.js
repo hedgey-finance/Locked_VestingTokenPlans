@@ -29,9 +29,9 @@ module.exports = (vesting, voting, params) => {
     cliff = params.cliff + now;
     end = C.planEnd(start, amount, rate, period);
     if (vesting) {
-      expect(await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address))
+      expect(await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, false))
         .to.emit('PlanCreated')
-        .withArgs('1', a.address, token.address, amount, start, cliff, end, rate, period, admin.address);
+        .withArgs('1', a.address, token.address, amount, start, cliff, end, rate, period, admin.address, false);
     } else {
       expect(await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period))
         .to.emit('PlanCreated')
@@ -50,6 +50,10 @@ module.exports = (vesting, voting, params) => {
     if (vesting) expect(plan.vestingAdmin).to.eq(admin.address);
     expect(await hedgey.lockedBalances(a.address, token.address)).to.eq(amount);
   });
+  it('checks the balances for accuracy', async () => {
+    //write tests for checking the balance accuracy here:  
+
+  })
   it(`batch creates several ${vesting ? 'vesting' : 'lockup'} ${voting ? 'voting' : 'not voting'} plans`, async () => {
     const batcher = s.batcher;
     await token.approve(batcher.address, C.E18_1000000);
@@ -68,23 +72,5 @@ module.exports = (vesting, voting, params) => {
     } else {
       await batcher.batchLockingPlans(hedgey.address, token.address, totalAmount, batch, period);
     }
-    let linearVester = s.vester.address;
-    await batcher.batchLinearVesting(linearVester, token.address, totalAmount, batch, admin.address);
   });
-  it('batch mints on the linear vesting for comparison', async () => {
-    let linear = await setupLinear();
-    admin = linear.admin;
-    a = linear.a;
-    token = linear.token;
-    const vester = linear.vester;
-    let batcher = linear.batchVester;
-    await token.approve(batcher.address, C.E18_1000000);
-    const batchSize = 80;
-    let recipients = Array(batchSize).fill(a.address);
-    let amounts = Array(batchSize).fill(amount);
-    let starts = Array(batchSize).fill(start);
-    let cliffs = Array(batchSize).fill(cliff);
-    let rates = Array(batchSize).fill(rate);
-    await batcher.createBatch(vester.address, recipients, token.address, amounts, starts, cliffs, rates, admin.address);
-  })
 };

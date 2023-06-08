@@ -20,14 +20,15 @@ library TimelockLibrary {
     uint256 amount,
     uint256 rate,
     uint256 period,
-    uint256 time
+    uint256 currentTime,
+    uint256 redemptionTime
   ) internal pure returns (uint256 unlockedBalance, uint256 lockedBalance, uint256 unlockTime) {
-    if (start > time || cliffDate > time) {
+    if (start > currentTime || cliffDate > currentTime) {
       lockedBalance = amount;
       unlockTime = start;
     } else {
       // should take into account rounding because there are no decimals allowed
-      uint256 periodsElapsed = (time - start) / period;
+      uint256 periodsElapsed = (redemptionTime - start) / period;
       uint256 calculatedBalance = periodsElapsed * rate;
       unlockedBalance = min(calculatedBalance, amount);
       lockedBalance = amount - unlockedBalance;

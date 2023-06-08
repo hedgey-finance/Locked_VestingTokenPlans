@@ -13,8 +13,6 @@ const setup = async () => {
     const VoteVest = await ethers.getContractFactory('TimeVestingVotingTokenPlans');
     const voteVest = await VoteVest.deploy('TimeLock', 'TL');
     const BatchPlanner = await ethers.getContractFactory('BatchPlanner');
-    const Vester = await ethers.getContractFactory('StreamVestingNFT');
-    const vester = await Vester.deploy('Vester', 'VST', locked.address, locked.address);
     const batcher = await BatchPlanner.deploy();
     const Token = await ethers.getContractFactory('Token');
     const token = await Token.deploy(C.E18_1000000, 'Token', 'TK');
@@ -27,7 +25,6 @@ const setup = async () => {
         locked,
         voteLocked,
         vest,
-        vester,
         voteVest,
         batcher,
         token,
