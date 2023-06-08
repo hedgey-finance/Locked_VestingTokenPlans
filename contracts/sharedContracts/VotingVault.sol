@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
-import './libraries/TransferHelper.sol';
+import '../libraries/TransferHelper.sol';
 
 interface IGovernanceToken {
     function delegate(address delegatee) external;
