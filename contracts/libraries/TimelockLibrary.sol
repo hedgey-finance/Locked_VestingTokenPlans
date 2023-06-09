@@ -7,7 +7,7 @@ library TimelockLibrary {
   }
 
   function endDate(uint256 start, uint256 amount, uint256 rate, uint256 period) internal pure returns (uint256 end) {
-    end = (amount % rate == 0) ? (amount / rate) * period + start : ((amount / rate) * period + 1) + start;
+    end = (amount % rate == 0) ? (amount / rate) * period + start : ((amount / rate) * period) + period + start;
   }
 
   function totalPeriods(uint256 rate, uint256 amount) internal pure returns (uint256 periods) {

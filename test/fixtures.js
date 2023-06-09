@@ -15,7 +15,7 @@ const setup = async () => {
     const BatchPlanner = await ethers.getContractFactory('BatchPlanner');
     const batcher = await BatchPlanner.deploy();
     const Token = await ethers.getContractFactory('Token');
-    const token = await Token.deploy(C.E18_1000000, 'Token', 'TK');
+    const token = await Token.deploy(C.E18_1000000.mul(1000), 'Token', 'TK');
     return {
         admin,
         a,

@@ -10,7 +10,6 @@ import './libraries/TimelockLibrary.sol';
 import './sharedContracts/URIAdmin.sol';
 import './sharedContracts/LockedStorage.sol';
 
-
 contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard, URIAdmin {
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
@@ -50,30 +49,33 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
   }
 
   function redeemPlans(uint256[] memory planIds) external nonReentrant {
-    _redeemPlans(planIds);
+    _redeemPlans(planIds, block.timestamp);
+  }
+
+  function partialRedeemPlans(uint256[] memory planIds, uint256 redemptionTime) external nonReentrant {
+    require(redemptionTime < block.timestamp, '!future redemption');
+    _redeemPlans(planIds, redemptionTime);
   }
 
   function redeemAllPlans() external nonReentrant {
     uint256 balance = balanceOf(msg.sender);
     uint256[] memory planIds = new uint256[](balance);
     for (uint256 i; i < balance; i++) {
-      uint256 planId = tokenOfOwnerByIndex(msg.sender, i);
+      uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
       planIds[i] = planId;
     }
-    _redeemPlans(planIds);
-  }
-
-  function partialRedeemPlan(uint256 planId, uint256 redemptionTime) external nonReentrant {
-    (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planId, block.timestamp, redemptionTime);
-    require(balance > 0, 'nothing to redeem');
-    _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
+    _redeemPlans(planIds, block.timestamp);
   }
 
   /****CORE INTERNAL FUNCTIONS*********************************************************************************************************************************************/
 
-  function _redeemPlans(uint256[] memory planIds) internal {
+  function _redeemPlans(uint256[] memory planIds, uint256 redemptionTime) internal {
     for (uint256 i; i < planIds.length; i++) {
-      (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planIds[i], block.timestamp, block.timestamp);
+      (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(
+        planIds[i],
+        block.timestamp,
+        redemptionTime
+      );
       if (balance > 0) _redeemPlan(msg.sender, planIds[i], balance, remainder, latestUnlock);
     }
   }

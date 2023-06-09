@@ -10,17 +10,14 @@ import './libraries/TimelockLibrary.sol';
 import './sharedContracts/URIAdmin.sol';
 import './sharedContracts/VestingStorage.sol';
 
-
 contract TimeVestingTokenPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, URIAdmin {
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
 
-  
   constructor(string memory name, string memory symbol) ERC721(name, symbol) {
     uriAdmin = msg.sender;
   }
 
-  
   function _baseURI() internal view override returns (string memory) {
     return baseURI;
   }
@@ -50,28 +47,38 @@ contract TimeVestingTokenPlans is ERC721Delegate, VestingStorage, ReentrancyGuar
     TransferHelper.transferTokens(token, msg.sender, address(this), amount);
     plans[newPlanId] = Plan(token, amount, start, cliff, rate, period, vestingAdmin, adminTransferOBO);
     _safeMint(recipient, newPlanId);
-    emit PlanCreated(newPlanId, recipient, token, amount, start, cliff, end, rate, period, vestingAdmin, adminTransferOBO);
-  }
-  
-  function redeemPlans(uint256[] memory planIds) external nonReentrant {
-    _redeemPlans(planIds);
+    emit PlanCreated(
+      newPlanId,
+      recipient,
+      token,
+      amount,
+      start,
+      cliff,
+      end,
+      rate,
+      period,
+      vestingAdmin,
+      adminTransferOBO
+    );
   }
 
-  
+  function redeemPlans(uint256[] memory planIds) external nonReentrant {
+    _redeemPlans(planIds, block.timestamp);
+  }
+
+  function partialRedeemPlans(uint256[] memory planIds, uint256 redemptionTime) external nonReentrant {
+    require(redemptionTime < block.timestamp, '!future redemption');
+    _redeemPlans(planIds, redemptionTime);
+  }
+
   function redeemAllPlans() external nonReentrant {
     uint256 balance = balanceOf(msg.sender);
     uint256[] memory planIds = new uint256[](balance);
     for (uint256 i; i < balance; i++) {
-      uint256 planId = tokenOfOwnerByIndex(msg.sender, i);
+      uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
       planIds[i] = planId;
     }
-    _redeemPlans(planIds);
-  }
-
-  function partialRedeemPlan(uint256 planId, uint256 redemptionTime) external nonReentrant {
-    (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planId, block.timestamp, redemptionTime);
-    require(balance > 0, 'nothing to redeem');
-    _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
+    _redeemPlans(planIds, block.timestamp);
   }
 
   function revokePlans(uint256[] memory planIds) external nonReentrant {
@@ -95,15 +102,17 @@ contract TimeVestingTokenPlans is ERC721Delegate, VestingStorage, ReentrancyGuar
     emit PlanRevoked(planId, balance, remainder);
   }
 
-  
-  function _redeemPlans(uint256[] memory planIds) internal {
+  function _redeemPlans(uint256[] memory planIds, uint256 redemptionTime) internal {
     for (uint256 i; i < planIds.length; i++) {
-      (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(planIds[i], block.timestamp, block.timestamp);
+      (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(
+        planIds[i],
+        block.timestamp,
+        redemptionTime
+      );
       if (balance > 0) _redeemPlan(msg.sender, planIds[i], balance, remainder, latestUnlock);
     }
   }
 
-  
   function _redeemPlan(
     address holder,
     uint256 planId,
@@ -139,7 +148,6 @@ contract TimeVestingTokenPlans is ERC721Delegate, VestingStorage, ReentrancyGuar
       _delegateToken(delegate, planId);
     }
   }
-
 
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
     uint256 holdersBalance = balanceOf(holder);

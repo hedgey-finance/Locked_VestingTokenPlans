@@ -17,7 +17,7 @@ const getVal = (amount) => {
 };
 
 const planEnd = (start, amount, rate, period) => {
-  const end = amount % rate == 0 ? (amount / rate) * period + start : (amount / rate) * period + 1 + start;
+  const end = BigNumber.from(amount).mod(rate) == 0 ? BigNumber.from(amount).div(rate).mul(period).add(start) : BigNumber.from(amount).div(rate).mul(period).add(start).add(period);
   return end;
 };
 
@@ -25,23 +25,30 @@ const totalPeriods = (rate, amount) => {
   return amount / rate;
 };
 
-const balanceAtTime = (start, cliff, amount, rate, period, timestamp) => {
-  let lockedBalance = 0;
-  let unlockedBalance = 0;
-  let unlockTime = 0;
-  if (start > timestamp || cliff > timestamp) {
-    lockedBalance = amount;
-    unlockTime = start;
+const balanceAtTime = (start, cliff, amount, rate, period, timestamp, redeemTime) => {
+  let remainder = BigNumber.from(0);
+  let balance = remainder;
+  let latestUnlock = remainder;
+  start = BigNumber.from(start);
+  cliff = BigNumber.from(cliff)
+  amount = BigNumber.from(amount);
+  rate = BigNumber.from(rate);
+  period = BigNumber.from(period);
+  timestamp = BigNumber.from(timestamp);
+  redeemTime = BigNumber.from(redeemTime);
+  if (start.gt(timestamp) || cliff.gt(timestamp)) {
+    remainder = amount;
+    latestUnlock = start;
   } else {
-    const periodsElapsed = (time - start) / period;
-    const calculatedBalance = periodsElapsed * rate;
-    unlockedBalance = Math.min(calculatedBalance, amount);
-    lockedBalance = amount - unlockedBalance;
-    unlockTime = start + period * periodsElapsed;
+    const periodsElapsed = (redeemTime.sub(start)).div(period);
+    const calculatedBalance = periodsElapsed.mul(rate);
+    balance = bigMin(calculatedBalance, amount);
+    remainder = BigNumber.from(amount).sub(balance);
+    latestUnlock = start.add((periodsElapsed.mul(period)));
     return {
-      unlockedBalance,
-      lockedBalance,
-      unlockTime,
+      balance,
+      remainder,
+      latestUnlock,
     };
   }
 };
@@ -72,6 +79,8 @@ module.exports = {
   E18_1000000: BigNumber.from(10).pow(18).mul(1000000),
   ZERO_ADDRESS: '0x0000000000000000000000000000000000000000',
   DAY: BigNumber.from(60).mul(60).mul(24),
+  WEEK: BigNumber.from(60).mul(60).mul(24).mul(7),
+  MONTH: BigNumber.from(60).mul(60).mul(24).mul(30),
   bigMin,
   randomBigNum,
   getVal,

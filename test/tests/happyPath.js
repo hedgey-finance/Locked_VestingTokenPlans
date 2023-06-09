@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { setup, setupLinear }  = require('../fixtures');
+const { setup, setupLinear } = require('../fixtures');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const C = require('../constants');
 const { BigNumber } = require('ethers');
@@ -25,11 +25,17 @@ module.exports = (vesting, voting, params) => {
     amount = params.amount;
     period = params.period;
     rate = params.rate;
-    start = params.start + now;
-    cliff = params.cliff + now;
+    start = BigNumber.from(now).add(params.start);
+    cliff = BigNumber.from(now).add(params.cliff);
     end = C.planEnd(start, amount, rate, period);
+    // console.log(`start: ${start.div(C.DAY)}`);
+    // console.log(`period: ${period.div(C.DAY)}`);
+    // console.log(`cliff: ${cliff.div(C.DAY)}`);
+    // console.log(`end: ${end.div(C.DAY)}`);
     if (vesting) {
-      expect(await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, false))
+      expect(
+        await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, false)
+      )
         .to.emit('PlanCreated')
         .withArgs('1', a.address, token.address, amount, start, cliff, end, rate, period, admin.address, false);
     } else {
@@ -50,13 +56,59 @@ module.exports = (vesting, voting, params) => {
     if (vesting) expect(plan.vestingAdmin).to.eq(admin.address);
     expect(await hedgey.lockedBalances(a.address, token.address)).to.eq(amount);
   });
-  it('checks the balances for accuracy', async () => {
-    //write tests for checking the balance accuracy here:  
+  it('moves forward and checks available balances and partially redeems', async () => {
+    let now = await time.increase(params.balanceCheck);
+    const partialTime = now - period;
+    const calculatedPartial = C.balanceAtTime(start, cliff, amount, rate, period, now, partialTime);
+    const calculatedFull = C.balanceAtTime(start, cliff, amount, rate, period, now, now);
+    const partial = await hedgey.planBalanceOf('1', now, partialTime);
+    const full = await hedgey.planBalanceOf('1', now, now);
+    //console.log(`calculated partial latest unlock: ${calculatedPartial.latestUnlock.sub(start).div(C.DAY)}`);
+    //console.log(`on chain partial: ${partial.latestUnlock.sub(start).div(C.DAY)}`);
+    
+    //console.log(`calculated full: ${calculatedFull.latestUnlock.sub(start).div(C.DAY)}`);
+    //console.log(`on chain full: ${full.latestUnlock.sub(start).div(C.DAY)}`);
+    expect(calculatedPartial.balance).to.eq(partial.balance);
+    expect(calculatedFull.balance).to.eq(full.balance);
+    expect(calculatedPartial.remainder).to.eq(partial.remainder);
+    expect(calculatedFull.remainder).to.eq(full.remainder);
+    expect(calculatedPartial.latestUnlock).to.eq(partial.latestUnlock);
+    expect(calculatedFull.latestUnlock).to.eq(full.latestUnlock);
+    expect(await hedgey.connect(a).partialRedeemPlans(['1'], partialTime))
+      .to.emit('PlanTokensUnlocked')
+      .withArgs('1', calculatedPartial.balance, calculatedPartial.remainder, calculatedPartial.latestUnlock);
+    expect(await token.balanceOf(hedgey.address)).to.eq(calculatedPartial.remainder);
+    expect(await token.balanceOf(a.address)).to.eq(calculatedPartial.balance);
+    const plan = await hedgey.plans('1');
+    expect(plan.amount).to.eq(calculatedPartial.remainder);
+    expect(plan.start).to.eq(calculatedPartial.latestUnlock);
+    expect(plan.rate).to.eq(rate);
+    expect(plan.period).to.eq(period);
+    expect(plan.cliff).to.eq(cliff);
+    expect(await hedgey.balanceOf(a.address)).to.eq(1);
+    expect(await hedgey.ownerOf('1')).to.eq(a.address);
+    const postPartial = await hedgey.planBalanceOf('1', now, partialTime);
+    const postFull = await hedgey.planBalanceOf('1', now, now);
+    expect(postPartial.balance).to.eq(0);
+    expect(postPartial.remainder).to.eq(partial.remainder);
+    expect(postPartial.latestUnlock).to.eq(partial.latestUnlock);
+    expect(postFull.balance).to.eq(full.balance.sub(partial.balance));
+    expect(postFull.remainder).to.eq(full.remainder);
+    expect(postFull.latestUnlock).to.eq(full.latestUnlock);
 
+  });
+  it('performs a full redemption of the plan after then end', async () => {
+    await time.increaseTo(end);
+    const plan = await hedgey.plans('1');
+    expect(await hedgey.connect(a).redeemPlans(['1'])).to.emit('PlanTokensUnlocked').withArgs('1', plan.amount, 0, end);
+    expect(await token.balanceOf(hedgey.address)).to.eq(0);
+    expect(await token.balanceOf(a.address)).to.eq(amount);
+    expect(await hedgey.balanceOf(a.address)).to.eq(0);
+    await expect(hedgey.ownerOf('1')).to.be.reverted;
   })
   it(`batch creates several ${vesting ? 'vesting' : 'lockup'} ${voting ? 'voting' : 'not voting'} plans`, async () => {
     const batcher = s.batcher;
-    await token.approve(batcher.address, C.E18_1000000);
+    await token.approve(batcher.address, C.E18_1000000.mul(1000));
     let singlePlan = {
       recipient: a.address,
       amount,
@@ -64,11 +116,11 @@ module.exports = (vesting, voting, params) => {
       cliff,
       rate
     }
-    const batchSize = 80;
+    const batchSize = 50;
     let totalAmount = amount.mul(batchSize);
     let batch = Array(batchSize).fill(singlePlan);
     if (vesting) {
-      await batcher.batchVestingPlans(hedgey.address, token.address, totalAmount, batch, period, admin.address);
+      await batcher.batchVestingPlans(hedgey.address, token.address, totalAmount, batch, period, admin.address, false);
     } else {
       await batcher.batchLockingPlans(hedgey.address, token.address, totalAmount, batch, period);
     }
