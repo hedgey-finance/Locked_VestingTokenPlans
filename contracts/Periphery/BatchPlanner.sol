@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.20;
 
-import './libraries/TransferHelper.sol';
-import './interfaces/IVestingTokenPlans.sol';
-import './interfaces/ILockedTokenPlans.sol';
+import '../libraries/TransferHelper.sol';
+import '../interfaces/IVestingTokenPlans.sol';
+import '../interfaces/ILockedTokenPlans.sol';
 
 contract BatchPlanner {
   struct Plan {
