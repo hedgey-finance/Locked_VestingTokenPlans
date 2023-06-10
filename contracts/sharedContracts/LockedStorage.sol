@@ -22,6 +22,8 @@ contract LockedStorage {
   /// @dev a mapping of the NFT tokenId from _tokenIds to the timelock structs to locate in storage
   mapping(uint256 => Plan) public plans;
 
+  mapping(uint256 => uint256) segmentOriginalEnd;
+
   ///@notice Events when a new timelock and NFT is minted this event spits out all of the struct information
   event PlanCreated(
     uint256 indexed id,
