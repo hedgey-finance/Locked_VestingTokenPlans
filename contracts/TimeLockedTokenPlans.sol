@@ -100,6 +100,30 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
     emit PlanTokensUnlocked(planId, balance, remainder, latestUnlock);
   }
 
+  function segmentPlan(address holder, uint256 planId, uint256 segmentAmount) internal {
+    require(ownerOf(plandId) == holder, '!holder');
+    Plan memory plan = plans[planId];
+    require(plan.amount % segmentAmount == 0, 'invalid segment');
+    uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
+    //it creates a new NFT whereby the segment amount is carved off and placed into a new NFT
+    _planIds.increment();
+    uint256 newPlanId = _planIds.current();
+    // update the current plan with amended details;
+    // first amount now is amount less segment
+    uint256 planAmount = plan.amount - segmentAmount;
+    plans[planId].amount = planAmount;
+    uint256 planRate = plan.rate / (planAmount / plan.amount  ); 
+    plans[planId].rate = planRate;
+    uint256 segmentRate = plan.rate / (planAmount / segmentAmount);
+    uint256 planEndCheck = TimelockLibrary.endDate(plan.start, planAmount, planRate, plan.period);
+    uint256 segmentEndCheck = TimelockLibrary.endDate(plan.start, segmentAmount, segmentRate, plan.period);
+    require(end == planEndCheck, '!planEnd');
+    require(end == segmentEndCheck, '!segmentEnd');
+    require(segmentRate + planRate == plan.rate, "rate error");
+    plans[newPlanId] = Plan(plan.token, segmentAmount, plan.start, plan.cliff, segmentRate, plan.period);
+    emit PlanCreated(newPlanId, holder, plan.token, segmentAmount, plan.start, plan.cliff, end, segmentRate, plan.period);
+  }
+
   /****VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function delegateTokens(address delegate, uint256[] memory planId) external {
