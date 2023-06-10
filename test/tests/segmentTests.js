@@ -34,7 +34,7 @@ module.exports = (voting, params) => {
     end = C.planEnd(start, amount, rate, period);
     await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
     // now holder A will segment it into two plans
-    await hedgey.connect(a).segmentPlan('1', segmentAmount);
+    await hedgey.connect(a).segmentPlans('1', [segmentAmount]);
     // check the two plans
     const calcPlanEnd = C.planEnd(start, planAmount, planRate, period);
     const calcSegEnd = C.planEnd(start, segmentAmount, segmentRate, period);
