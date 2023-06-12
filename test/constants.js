@@ -9,6 +9,7 @@ const bigMin = (a, b) => {
 const randomBigNum = (base, max, min) => {
   let num = Math.round(Math.random() * max);
   num = Math.max(num, min);
+  console.log(num);
   return BigNumber.from(10).pow(base).mul(num);
 };
 

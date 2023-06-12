@@ -15,7 +15,7 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, VestingStorage, Reentr
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
 
-  mapping(uint256 => address) internal votingVaults;
+  mapping(uint256 => address) public votingVaults;
 
   event VotingVaultCreated(uint256 indexed id, address vaultAddress);
 

@@ -17,7 +17,7 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
 
-  mapping(uint256 => address) internal votingVaults;
+  mapping(uint256 => address) public votingVaults;
 
   event VotingVaultCreated(uint256 indexed id, address vaultAddress);
 
@@ -92,14 +92,14 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
     _combinePlans(msg.sender, planId0, planId1);
   }
 
-  function redeemAndTransfer(uint256 planId, address to) external nonReentrant {
+  function redeemAndTransfer(uint256 planId, address to) external virtual nonReentrant {
     (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(
-        planId,
-        block.timestamp,
-        block.timestamp
-      );
-      if (balance > 0) _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
-      if (remainder > 0) _transfer(msg.sender, to, planId);
+      planId,
+      block.timestamp,
+      block.timestamp
+    );
+    if (balance > 0) _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
+    if (remainder > 0) _transfer(msg.sender, to, planId);
   }
 
   /****CORE INTERNAL FUNCTIONS*********************************************************************************************************************************************/
@@ -148,20 +148,18 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
     uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
     _planIds.increment();
     newPlanId = _planIds.current();
+    _safeMint(holder, newPlanId);
     uint256 planAmount = plan.amount - segmentAmount;
-    console.log('plan amount is set to:', planAmount);
     plans[planId].amount = planAmount;
     uint256 planRate = (plan.rate * ((planAmount * (10 ** 18)) / plan.amount)) / (10 ** 18);
-    console.log('original plan rate is: ', plan.rate);
-    console.log('planRate is now set to:', planRate);
     plans[planId].rate = planRate;
     uint256 segmentRate = plan.rate - planRate;
-    console.log('segment rate is set to:', segmentRate);
-    uint256 planEnd = TimelockLibrary.endDate(plan.start, planAmount, planRate, plan.period);
-    uint256 segmentEnd = TimelockLibrary.endDate(plan.start, segmentAmount, segmentRate, plan.period);
-    require(planEnd == segmentEnd, '!planEnd');
-    require(planEnd >= end, 'plan end error');
-    // require(segmentEnd >= end, 'segmentEnd error');
+    (uint256 planEnd, bool validPlan) = TimelockLibrary.validateEnd(plan.start, plan.cliff, planAmount, planRate, plan.period);
+    (uint256 segmentEnd, bool validSegment) = TimelockLibrary.validateEnd(plan.start, plan.cliff, segmentAmount, segmentRate, plan.period);
+    require(validPlan && validSegment, 'invalid new plans');
+    uint256 endCheck = segmentOriginalEnd[planId] == 0 ? end : segmentOriginalEnd[planId];
+    require(planEnd >= endCheck, 'plan end error');
+    require(segmentEnd >= endCheck, 'segmentEnd error');
     plans[newPlanId] = Plan(plan.token, segmentAmount, plan.start, plan.cliff, segmentRate, plan.period);
     if (segmentOriginalEnd[planId] == 0) {
       segmentOriginalEnd[planId] = end;
@@ -209,6 +207,10 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
     if (vault0 != address(0)) {
       plans[planId0].amount += plans[planId1].amount;
       plans[planId0].rate += plans[planId1].rate;
+      uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
+      if (end < plan0End) {
+        require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+      }
       // set this as primary voting vault, check if vault1 has anything
       if (vault1 != address(0)) {
         // transfer funds from vault1 to vault0
@@ -228,11 +230,15 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
         plan0.start,
         plan0.cliff,
         plan0.period,
-        plan0End
+        end
       );
     } else if (vault1 != address(0)) {
       plans[planId1].amount += plans[planId0].amount;
       plans[planId1].rate += plans[planId0].rate;
+      uint256 end = TimelockLibrary.endDate(plan1.start, plans[planId1].amount, plans[planId1].rate, plan1.period);
+      if (end < plan1End) {
+        require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+      }
       // we know that vault 0 is empty, so just need to send tokens to vault 1 then
       TransferHelper.withdrawTokens(plan0.token, vault1, plan0.amount);
       // now we keep plan1 instead
@@ -247,11 +253,15 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
         plan1.start,
         plan1.cliff,
         plan1.period,
-        plan1End
+        end
       );
     } else {
       plans[planId0].amount += plans[planId1].amount;
       plans[planId0].rate += plans[planId1].rate;
+      uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
+      if (end < plan0End) {
+        require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+      }
       delete plans[planId1];
       _burn(planId1);
       emit PlansCombined(
@@ -263,7 +273,7 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
         plan0.start,
         plan0.cliff,
         plan0.period,
-        plan0End
+        end
       );
     }
   }

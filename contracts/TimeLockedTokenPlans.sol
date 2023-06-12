@@ -87,14 +87,14 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
     _combinePlans(msg.sender, planId0, planId1);
   }
 
-  function redeemAndTransfer(uint256 planId, address to) external nonReentrant {
+  function redeemAndTransfer(uint256 planId, address to) external virtual nonReentrant {
     (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(
-        planId,
-        block.timestamp,
-        block.timestamp
-      );
-      if (balance > 0) _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
-      if (remainder > 0) _transfer(msg.sender, to, planId);
+      planId,
+      block.timestamp,
+      block.timestamp
+    );
+    if (balance > 0) _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
+    if (remainder > 0) _transfer(msg.sender, to, planId);
   }
 
   /****CORE INTERNAL FUNCTIONS*********************************************************************************************************************************************/
@@ -135,22 +135,23 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
     Plan memory plan = plans[planId];
     require(segmentAmount < plan.amount, 'amount error');
     uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
+    // console.log('original plan end: ', end);
     _planIds.increment();
     newPlanId = _planIds.current();
+    _safeMint(holder, newPlanId);
     uint256 planAmount = plan.amount - segmentAmount;
-    console.log('plan amount is set to:', planAmount);
     plans[planId].amount = planAmount;
     uint256 planRate = (plan.rate * ((planAmount * (10 ** 18)) / plan.amount)) / (10 ** 18);
-    console.log('original plan rate is: ', plan.rate);
-    console.log('planRate is now set to:', planRate);
     plans[planId].rate = planRate;
     uint256 segmentRate = plan.rate - planRate;
-    console.log('segment rate is set to:', segmentRate);
-    uint256 planEnd = TimelockLibrary.endDate(plan.start, planAmount, planRate, plan.period);
-    uint256 segmentEnd = TimelockLibrary.endDate(plan.start, segmentAmount, segmentRate, plan.period);
-    require(planEnd == segmentEnd, '!planEnd');
-    require(planEnd >= end, 'plan end error');
-    require(segmentEnd >= end, 'segmentEnd error');
+    (uint256 planEnd, bool validPlan) = TimelockLibrary.validateEnd(plan.start, plan.cliff, planAmount, planRate, plan.period);
+    (uint256 segmentEnd, bool validSegment) = TimelockLibrary.validateEnd(plan.start, plan.cliff, segmentAmount, segmentRate, plan.period);
+    require(validPlan && validSegment, 'invalid new plans');
+    // console.log('contract planEnd: ', planEnd);
+    // console.log('contract segmentEnd: ', segmentEnd);
+    uint256 endCheck = segmentOriginalEnd[planId] == 0 ? end : segmentOriginalEnd[planId];
+    require(planEnd >= endCheck, 'plan end error');
+    require(segmentEnd >= endCheck, 'segmentEnd error');
     plans[newPlanId] = Plan(plan.token, segmentAmount, plan.start, plan.cliff, segmentRate, plan.period);
     if (segmentOriginalEnd[planId] == 0) {
       segmentOriginalEnd[planId] = end;
@@ -188,6 +189,11 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
     // add em together and delete plan 1
     plans[planId0].amount += plans[planId1].amount;
     plans[planId0].rate += plans[planId1].rate;
+    uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
+    if (end < plan0End) {
+      console.log('end was lower, have to check original');
+      require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+    }
     delete plans[planId1];
     _burn(planId1);
     emit PlansCombined(
@@ -199,7 +205,7 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
       plan0.start,
       plan0.cliff,
       plan0.period,
-      plan0End
+      end
     );
   }
 
