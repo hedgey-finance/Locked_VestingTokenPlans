@@ -75,9 +75,13 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
     }
   }
 
-  function segmentAndDelegatePlans(uint256 planId, uint256[] memory segmentAmounts, address[] memory delegatees) external nonReentrant {
+  function segmentAndDelegatePlans(
+    uint256 planId,
+    uint256[] memory segmentAmounts,
+    address[] memory delegatees
+  ) external nonReentrant {
     for (uint256 i; i < segmentAmounts.length; i++) {
-      uint256 newPlanId =  _segmentPlan(msg.sender, planId, segmentAmounts[i]);
+      uint256 newPlanId = _segmentPlan(msg.sender, planId, segmentAmounts[i]);
       _delegateToken(delegatees[i], newPlanId);
     }
   }
@@ -139,17 +143,26 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
     uint256 segmentEnd = TimelockLibrary.endDate(plan.start, segmentAmount, segmentRate, plan.period);
     require(planEnd == segmentEnd, '!planEnd');
     require(planEnd >= end, 'plan end error');
-    // require(segmentEnd >= end, 'segmentEnd error');
+    require(segmentEnd >= end, 'segmentEnd error');
     plans[newPlanId] = Plan(plan.token, segmentAmount, plan.start, plan.cliff, segmentRate, plan.period);
     if (segmentOriginalEnd[planId] == 0) {
       segmentOriginalEnd[planId] = end;
       segmentOriginalEnd[newPlanId] = end;
     } else {
-      // dont change the planId original end date, but set this segment to the plans original end date
       segmentOriginalEnd[newPlanId] = segmentOriginalEnd[planId];
     }
-
-    //emit PlanSegmented()
+    emit PlanSegmented(
+      planId,
+      newPlanId,
+      planAmount,
+      planRate,
+      segmentAmount,
+      segmentRate,
+      plan.start,
+      plan.cliff,
+      plan.period,
+      planEnd
+    );
   }
 
   function _combinePlans(address holder, uint256 planId0, uint256 planId1) internal {
@@ -170,7 +183,17 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
     plans[planId0].rate += plans[planId1].rate;
     delete plans[planId1];
     _burn(planId1);
-    //emit PlansCombined
+    emit PlansCombined(
+      planId0,
+      planId1,
+      planId0,
+      plans[planId0].amount,
+      plans[planId0].rate,
+      plan0.start,
+      plan0.cliff,
+      plan0.period,
+      plan0End
+    );
   }
 
   /****VOTING FUNCTIONS*********************************************************************************************************************************************/

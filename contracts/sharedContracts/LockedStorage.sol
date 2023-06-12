@@ -4,7 +4,7 @@ pragma solidity 0.8.20;
 import '../libraries/TimelockLibrary.sol';
 
 contract LockedStorage {
-    /// @dev the timelock is the storage in a struct of the tokens that are currently being timelocked
+  /// @dev the timelock is the storage in a struct of the tokens that are currently being timelocked
   /// @dev token is the token address being timelocked
   /// @dev amount is the total amount of tokens in the timelock, which is comprised of the balance and the remainder
   /// @dev start is the start date when token timelock begins, this can be set at anytime including past and future
@@ -37,9 +37,34 @@ contract LockedStorage {
     uint256 period
   );
 
-   /// @notice event when the NFT is redeemed, there are two redemption types, partial and full redemption
+  /// @notice event when the NFT is redeemed, there are two redemption types, partial and full redemption
   /// if the remainder == 0 then it is a full redemption and the NFT is burned, otherwise it is a partial redemption
   event PlanTokensUnlocked(uint256 indexed id, uint256 amountClaimed, uint256 planRemainder, uint256 resetDate);
+
+  event PlanSegmented(
+    uint256 indexed id,
+    uint256 indexed segmentId,
+    uint256 newPlanAmount,
+    uint256 newPlanRate,
+    uint256 segmentAmount,
+    uint256 segmentRate,
+    uint256 start,
+    uint256 cliff,
+    uint256 period,
+    uint256 end
+  );
+
+  event PlansCombined(
+    uint256 indexed id0,
+    uint256 indexed id1,
+    uint256 indexed survivingId,
+    uint256 amount,
+    uint256 rate,
+    uint256 start,
+    uint256 cliff,
+    uint256 period,
+    uint256 end
+  );
 
   function planBalanceOf(
     uint256 planId,

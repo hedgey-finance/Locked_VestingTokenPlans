@@ -80,9 +80,13 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
     }
   }
 
-  function segmentAndDelegatePlans(uint256 planId, uint256[] memory segmentAmounts, address[] memory delegatees) external nonReentrant {
+  function segmentAndDelegatePlans(
+    uint256 planId,
+    uint256[] memory segmentAmounts,
+    address[] memory delegatees
+  ) external nonReentrant {
     for (uint256 i; i < segmentAmounts.length; i++) {
-      uint256 newPlanId =  _segmentPlan(msg.sender, planId, segmentAmounts[i]);
+      uint256 newPlanId = _segmentPlan(msg.sender, planId, segmentAmounts[i]);
       _delegate(msg.sender, newPlanId, delegatees[i]);
     }
   }
@@ -159,14 +163,25 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
       // dont change the planId original end date, but set this segment to the plans original end date
       segmentOriginalEnd[newPlanId] = segmentOriginalEnd[planId];
     }
-    //emit PlanSegmented()
     // now we have to do the onchain stuff if there is a voting vault
-    if(votingVaults[planId] != address(0)) {
+    if (votingVaults[planId] != address(0)) {
       // pull tokens back to contract here
       VotingVault(votingVaults[planId]).withdrawTokens(address(this), segmentAmount);
       // setup a new voting vault
       _setupVoting(holder, newPlanId);
     }
+    emit PlanSegmented(
+      planId,
+      newPlanId,
+      planAmount,
+      planRate,
+      segmentAmount,
+      segmentRate,
+      plan.start,
+      plan.cliff,
+      plan.period,
+      planEnd
+    );
   }
 
   function _combinePlans(address holder, uint256 planId0, uint256 planId1) internal {
@@ -182,13 +197,11 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
     uint256 plan1End = TimelockLibrary.endDate(plan1.start, plan1.amount, plan1.rate, plan1.period);
     // either they have the same end date, or if they dont then they should have the same original end date if they were segmented
     require(plan0End == plan1End || segmentOriginalEnd[planId0] == segmentOriginalEnd[planId1], 'end error');
-    // add em together and delete plan 1
-    plans[planId0].amount += plans[planId1].amount;
-    plans[planId0].rate += plans[planId1].rate;
-    // have to process the voting vault aspect
     address vault0 = votingVaults[planId0];
     address vault1 = votingVaults[planId1];
     if (vault0 != address(0)) {
+      plans[planId0].amount += plans[planId1].amount;
+      plans[planId0].rate += plans[planId1].rate;
       // set this as primary voting vault, check if vault1 has anything
       if (vault1 != address(0)) {
         // transfer funds from vault1 to vault0
@@ -199,18 +212,53 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
       }
       delete plans[planId1];
       _burn(planId1);
+      emit PlansCombined(
+        planId0,
+        planId1,
+        planId0,
+        plans[planId0].amount,
+        plans[planId0].rate,
+        plan0.start,
+        plan0.cliff,
+        plan0.period,
+        plan0End
+      );
     } else if (vault1 != address(0)) {
+      plans[planId1].amount += plans[planId0].amount;
+      plans[planId1].rate += plans[planId0].rate;
       // we know that vault 0 is empty, so just need to send tokens to vault 1 then
       TransferHelper.withdrawTokens(plan0.token, vault1, plan0.amount);
       // now we keep plan1 instead
       delete plans[planId0];
-    _burn(planId0);
+      _burn(planId0);
+      emit PlansCombined(
+        planId0,
+        planId1,
+        planId1,
+        plans[planId1].amount,
+        plans[planId1].rate,
+        plan1.start,
+        plan1.cliff,
+        plan1.period,
+        plan1End
+      );
     } else {
-     delete plans[planId1];
-    _burn(planId1);
+      plans[planId0].amount += plans[planId1].amount;
+      plans[planId0].rate += plans[planId1].rate;
+      delete plans[planId1];
+      _burn(planId1);
+      emit PlansCombined(
+        planId0,
+        planId1,
+        planId0,
+        plans[planId0].amount,
+        plans[planId0].rate,
+        plan0.start,
+        plan0.cliff,
+        plan0.period,
+        plan0End
+      );
     }
-    
-    //emit PlansCombined
   }
 
   /****VOTING FUNCTIONS*********************************************************************************************************************************************/
@@ -218,8 +266,6 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
   function setupVoting(uint256 planId) external nonReentrant {
     _setupVoting(msg.sender, planId);
   }
-
-  
 
   function delegate(uint256 planId, address delegatee) external nonReentrant {
     _delegate(msg.sender, planId, delegatee);
