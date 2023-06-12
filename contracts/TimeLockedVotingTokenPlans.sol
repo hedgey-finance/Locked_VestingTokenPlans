@@ -42,13 +42,10 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
   ) external nonReentrant {
     require(recipient != address(0), '01');
     require(token != address(0), '02');
-    require(amount > 0, '03');
-    require(rate > 0, '04');
-    require(rate <= amount, '05');
+    (uint256 end, bool valid) = TimelockLibrary.validateEnd(start, cliff, amount, rate, period);
+    require(valid);
     _planIds.increment();
     uint256 newPlanId = _planIds.current();
-    uint256 end = TimelockLibrary.endDate(start, amount, rate, period);
-    require(cliff <= end, 'SV12');
     TransferHelper.transferTokens(token, msg.sender, address(this), amount);
     plans[newPlanId] = Plan(token, amount, start, cliff, rate, period);
     _safeMint(recipient, newPlanId);

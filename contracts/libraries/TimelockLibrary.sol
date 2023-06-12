@@ -10,6 +10,16 @@ library TimelockLibrary {
     end = (amount % rate == 0) ? (amount / rate) * period + start : ((amount / rate) * period) + period + start;
   }
 
+  function validateEnd(uint256 start, uint256 cliff, uint256 amount, uint256 rate, uint256 period) internal pure returns (uint256 end, bool valid) {
+    require(amount > 0, 'amount error');
+    require(rate > 0, 'rate error');
+    require(rate <= amount, 'rate-amount');
+    require(period > 0, 'period error');
+    end = (amount % rate == 0) ? (amount / rate) * period + start : ((amount / rate) * period) + period + start;
+    require(cliff <= end, 'SV12');
+    valid = true;
+  }
+
   function totalPeriods(uint256 rate, uint256 amount) internal pure returns (uint256 periods) {
     periods = amount / rate;
   }

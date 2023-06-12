@@ -2,15 +2,17 @@
 pragma solidity 0.8.20;
 
 import '../libraries/TransferHelper.sol';
+import '../libraries/TimelockLibrary.sol';
 import '../interfaces/IVestingTokenPlans.sol';
 import '../interfaces/ILockedTokenPlans.sol';
 import '../interfaces/ITimeLock.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/utils/cryptography/MerkleProof.sol';
 
 contract ClaimCampaign is ReentrancyGuard {
-  uint256 private _campaignId;
+  uint256 private _campaignIds;
+
+  address private tipReceiver;
 
   enum TokenLockup {
     Unlocked,
@@ -19,9 +21,8 @@ contract ClaimCampaign is ReentrancyGuard {
     Vesting
   }
 
-  struct Claim {
+  struct ClaimLockup {
     address tokenLocker;
-    uint256 amount;
     uint256 rate;
     uint256 start;
     uint256 cliff;
@@ -37,21 +38,49 @@ contract ClaimCampaign is ReentrancyGuard {
   }
 
   mapping(uint256 => Campaign) public campaigns;
-  mapping(uint256 => Claim) public claims;
+  mapping(uint256 => ClaimLockup) public claimLockups;
 
   //maps campaign id to a wallet address, which is flipped to true when claimed
   mapping(uint256 => mapping(address => bool)) public claimed;
 
-  function createCampaign(Campaign memory campaign, Claim memory claim, uint256 hedgeyTip) external nonReentrant {
+  // events
+  event CampaignStarted(uint256 indexed id, Campaign campaign);
+  event ClaimLockupCreated(uint256 indexed id, ClaimLockup claimLockup);
+
+  constructor(address _tipReceiver) {
+    tipReceiver = _tipReceiver;
+  }
+
+  function createCampaign(
+    Campaign memory campaign,
+    ClaimLockup memory claimLockup,
+    uint256 hedgeyTip
+  ) external nonReentrant {
     require(campaign.token != address(0));
     require(campaign.manager != address(0));
-    _campaignId++;
-    TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + hedgeyTip);
-    if (claim.tokenLocker != address(0))
-      SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), claim.tokenLocker, campaign.amount);
-    campaigns[_campaignId] = campaign;
-    claims[_campaignId] = claim;
-    //emit event
+    require(campaign.amount > 0);
+    _campaignIds++;
+    TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount);
+    if (hedgeyTip > 0) TransferHelper.transferTokens(campaign.token, msg.sender, tipReceiver, hedgeyTip);
+    if (campaign.tokenLockup != TokenLockup.Unlocked) {
+      require(claimLockup.tokenLocker != address(0));
+      if (campaign.tokenLockup == TokenLockup.Cliff) require(claimLockup.cliff > block.timestamp);
+      if (campaign.tokenLockup == TokenLockup.Linear || campaign.tokenLockup == TokenLockup.Vesting) {
+        (uint256 end, bool valid) = TimelockLibrary.validateEnd(
+          claimLockup.start,
+          claimLockup.cliff,
+          campaign.amount,
+          claimLockup.rate,
+          claimLockup.period
+        );
+        require(valid);
+      }
+      claimLockups[_campaignIds] = claimLockup;
+      SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), claimLockup.tokenLocker, campaign.amount);
+      emit ClaimLockupCreated(_campaignIds, claimLockup);
+    }
+    campaigns[_campaignIds] = campaign;
+    emit CampaignStarted(_campaignIds, campaign);
   }
 
   function claimTokens(uint256 campaignId, bytes32[] memory proof, uint256 claimAmount) external nonReentrant {
@@ -59,39 +88,41 @@ contract ClaimCampaign is ReentrancyGuard {
     Campaign memory campaign = campaigns[campaignId];
     require(verify(campaign.root, proof, msg.sender, claimAmount), '!eligible');
     require(campaign.amount >= claimAmount, 'campaign unfunded');
-    Claim memory claim = claims[campaignId];
     claimed[campaignId][msg.sender] = true;
     campaigns[campaignId].amount -= claimAmount;
     if (campaigns[campaignId].amount == 0) {
       delete campaigns[campaignId];
-      delete claims[campaignId];
+      delete claimLockups[campaignId];
     }
     if (campaign.tokenLockup == TokenLockup.Unlocked) {
       TransferHelper.withdrawTokens(campaign.token, msg.sender, claimAmount);
-    } else if (campaign.tokenLockup == TokenLockup.Cliff) {
-      ITimeLock(claim.tokenLocker).createNFT(msg.sender, claimAmount, campaign.token, claim.cliff);
-    } else if (campaign.tokenLockup == TokenLockup.Linear) {
-      ILockedTokenPlans(claim.tokenLocker).createPlan(
-        msg.sender,
-        campaign.token,
-        claimAmount,
-        claim.start,
-        claim.cliff,
-        claim.rate,
-        claim.period
-      );
-    } else if (campaign.tokenLockup == TokenLockup.Vesting) {
-      IVestingTokenPlans(claim.tokenLocker).createPlan(
-        msg.sender,
-        campaign.token,
-        claimAmount,
-        claim.start,
-        claim.cliff,
-        claim.rate,
-        claim.period,
-        campaign.manager,
-        false
-      );
+    } else {
+      ClaimLockup memory c = claimLockups[campaignId];
+      if (campaign.tokenLockup == TokenLockup.Cliff) {
+        ITimeLock(c.tokenLocker).createNFT(msg.sender, claimAmount, campaign.token, c.cliff);
+      } else if (campaign.tokenLockup == TokenLockup.Linear) {
+        ILockedTokenPlans(c.tokenLocker).createPlan(
+          msg.sender,
+          campaign.token,
+          claimAmount,
+          c.start,
+          c.cliff,
+          c.rate,
+          c.period
+        );
+      } else {
+        IVestingTokenPlans(c.tokenLocker).createPlan(
+          msg.sender,
+          campaign.token,
+          claimAmount,
+          c.start,
+          c.cliff,
+          c.rate,
+          c.period,
+          campaign.manager,
+          false
+        );
+      }
     }
   }
 
@@ -99,7 +130,7 @@ contract ClaimCampaign is ReentrancyGuard {
     Campaign memory campaign = campaigns[campaignId];
     require(campaign.manager == msg.sender, '!manager');
     delete campaigns[campaignId];
-    delete claims[campaignId];
+    delete claimLockups[campaignId];
     TransferHelper.withdrawTokens(campaign.token, msg.sender, campaign.amount);
   }
 
@@ -107,5 +138,9 @@ contract ClaimCampaign is ReentrancyGuard {
     bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(claimer, amount))));
     require(MerkleProof.verify(proof, root, leaf), 'Invalid proof');
     return true;
+  }
+
+  function currentCampaignId() public view returns (uint256) {
+    return _campaignIds;
   }
 }
