@@ -288,6 +288,14 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
     _delegate(msg.sender, planId, delegatee);
   }
 
+  function delegateAll(address delegatee) external nonReentrant {
+    uint256 balance = balanceOf(msg.sender);
+    for (uint256 i; i < balance; i++) {
+      uint256 planId = tokenOfOwnerByIndex(msg.sender, i);
+      _delegate(msg.sender, planId, delegatee);
+    }
+  }
+
   function _setupVoting(address holder, uint256 planId) internal returns (address) {
     require(ownerOf(planId) == holder);
     Plan memory plan = plans[planId];

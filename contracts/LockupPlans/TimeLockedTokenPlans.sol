@@ -211,17 +211,15 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
 
   /****VOTING FUNCTIONS*********************************************************************************************************************************************/
 
-  function delegateTokens(address delegate, uint256[] memory planId) external {
-    for (uint256 i; i < planId.length; i++) {
-      _delegateToken(delegate, planId[i]);
-    }
+  function delegate(uint256 planId, address delegatee) external nonReentrant {
+      _delegateToken(delegatee, planId);
   }
 
-  function delegateAllNFTs(address delegate) external {
+  function delegateAll(address delegatee) external nonReentrant {
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
       uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
-      _delegateToken(delegate, planId);
+      _delegateToken(delegatee, planId);
     }
   }
 

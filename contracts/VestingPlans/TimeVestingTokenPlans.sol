@@ -132,17 +132,15 @@ contract TimeVestingTokenPlans is ERC721Delegate, VestingStorage, ReentrancyGuar
 
   /****VOTING FUNCTIONS*********************************************************************************************************************************************/
 
-  function delegateTokens(address delegate, uint256[] memory planIds) external {
-    for (uint256 i; i < planIds.length; i++) {
-      _delegateToken(delegate, planIds[i]);
-    }
+  function delegate(uint256 planId, address delegatee) external {
+      _delegateToken(delegatee, planId);
   }
 
-  function delegateAllNFTs(address delegate) external {
+  function delegateAll(address delegatee) external {
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
       uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
-      _delegateToken(delegate, planId);
+      _delegateToken(delegatee, planId);
     }
   }
 
