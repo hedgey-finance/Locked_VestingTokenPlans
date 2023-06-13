@@ -1,7 +1,7 @@
 const C = require('./constants');
 const adminTests = require('./tests/adminTests');
 const happyPath = require('./tests/happyPath');
-const { segmentTests } = require('./tests/segmentTests');
+const { segmentTests, segmentVotingTests, segmentErrorTests } = require('./tests/segmentTests');
 
 // describe('Testing the URI Admin functions', () => {
 //   adminTests(true, false);
@@ -75,6 +75,7 @@ describe('Testing the Segmentation and Combination Methods', () => {
     // },
   ];
   paramsMatrix.forEach((params) => {
-    segmentTests(false, params);
+    // segmentTests(false, params);
+    segmentVotingTests(params);
   });
 });

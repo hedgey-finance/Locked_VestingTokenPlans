@@ -71,7 +71,7 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
     _redeemPlans(planIds, block.timestamp);
   }
 
-  function segmentPlans(uint256 planId, uint256[] memory segmentAmounts) external nonReentrant {
+  function segmentPlan(uint256 planId, uint256[] memory segmentAmounts) external nonReentrant {
     for (uint256 i; i < segmentAmounts.length; i++) {
       _segmentPlan(msg.sender, planId, segmentAmounts[i]);
     }

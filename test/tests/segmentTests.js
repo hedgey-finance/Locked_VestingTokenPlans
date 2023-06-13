@@ -42,7 +42,7 @@ const segmentTests = (voting, params) => {
     end = C.planEnd(start, amount, rate, period);
     await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
     // now holder A will segment it into two plans
-    expect(await hedgey.connect(a).segmentPlans('1', [segmentAmount]))
+    expect(await hedgey.connect(a).segmentPlan('1', [segmentAmount]))
       .to.emit('PlanSegmented')
       .withArgs('1', '2', planAmount, planRate, segmentAmount, segmentRate, start, cliff, period, segmentEnd);
     // check the two plans
@@ -80,7 +80,7 @@ const segmentTests = (voting, params) => {
   });
   it('segments plan 1 with two segments', async () => {
     const secondSegment = params.secondSegment
-    await hedgey.connect(a).segmentPlans('1', [segmentAmount, secondSegment]);
+    await hedgey.connect(a).segmentPlan('1', [segmentAmount, secondSegment]);
     
   });
   it('recombines segment 3 and 4 together, and then combines the original plan 1 with the survivor', async () => {
@@ -92,7 +92,52 @@ const segmentTests = (voting, params) => {
 };
 
 const segmentVotingTests = (params) => {
-
+    let s, admin, a, b, c, d, hedgey, token;
+    let amount, start, cliff, period, rate, end, planAmount, planRate, planEnd, segmentAmount, segmentRate, segmentEnd;
+    let vaultAddress, segmentVault;
+  it(`creates a plan, sets up voting, and then segments that plan`, async () => {
+    s = await setup();
+    hedgey = s.voteLocked;
+    admin = s.admin;
+    a = s.a;
+    b = s.b;
+    c = s.c;
+    d = s.d;
+    token = s.token;
+    await token.approve(hedgey.address, C.E18_1000000);
+    let now = await time.latest();
+    amount = params.amount;
+    segmentAmount = params.segmentAmount;
+    planAmount = amount.sub(segmentAmount);
+    period = params.period;
+    rate = params.rate;
+    let dPlanAmt = planAmount.mul(C.E18_1);
+    planRate = rate.mul(dPlanAmt.div(amount));
+    planRate = planRate.div(C.E18_1);
+    segmentRate = rate.sub(planRate);
+    start = BigNumber.from(now).add(params.start);
+    cliff = BigNumber.from(now).add(params.cliff);
+    end = C.planEnd(start, amount, rate, period);
+    await hedgey.createPlan(a.address, token.address , amount, start, cliff, rate, period);
+    const tx = await hedgey.connect(a).setupVoting(1);
+    vaultAddress = (await tx.wait()).events[3].args.vaultAddress;
+    expect(await token.balanceOf(vaultAddress)).to.eq(amount);
+    const segTx = await hedgey.connect(a).segmentPlan('1', [segmentAmount]);
+    segmentVault = (await segTx.wait()).events[6].args.vaultAddress;
+    expect(await token.balanceOf(vaultAddress)).to.eq(planAmount);
+    expect(await token.balanceOf(segmentVault)).to.eq(segmentAmount);
+    expect(await token.delegates(vaultAddress)).to.eq(a.address);
+    expect(await token.delegates(segmentVault)).to.eq(a.address);
+    await hedgey.connect(a).delegate(2, b.address);
+    expect(await token.delegates(segmentVault)).to.eq(b.address);
+    expect(await token.delegates(vaultAddress)).to.eq(a.address);
+  });
+  it('combines the two plans', async () => {
+    await hedgey.connect(a).combinePlans(1, 2);
+    expect(await token.balanceOf(vaultAddress)).to.eq(amount);
+    expect(await token.balanceOf(segmentVault)).to.eq(0);
+    expect(await token.delegates(vaultAddress)).to.eq(a.address);
+  })
 }
 
 const segmentErrorTests = () => {
