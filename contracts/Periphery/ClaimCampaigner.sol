@@ -9,7 +9,7 @@ import '../interfaces/ITimeLock.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/utils/cryptography/MerkleProof.sol';
 
-contract ClaimCampaign is ReentrancyGuard {
+contract ClaimCampaigner is ReentrancyGuard {
   uint256 private _campaignIds;
 
   address private tipReceiver;

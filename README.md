@@ -15,6 +15,17 @@ The plans super powers include:
   - Ability to break up lockup plans into smaller segements, and then recombine them (for sub-delegation of voting, or selling in OTC secondary markets)
 
 
+## Repository Navigation
+The smart contracts are all located in the ./contracts folder. The Final End User contracts are in the ./contracts/LockupPlans and ./contracts/VestingPlans folders. The lockup plan contracts are in the Lockupplans folder, and vesting plan contracts in the VestingPlans folder. The on-chain voting optimized contracts are named with Voting in the contract name, while the snapshot optimized contracts do not contain this explicit word. 
+
+Periphery Contracts are used in addition to the core for users to quickly create and distribute multiple plans at the same time, either by direct distribution using the BatchPlanner, or via an upload and claim method via the ClaimCampaigner. 
+
+The Plan contracts use some shared contracts for NFT uri admin at deployment, on-chain voting vault contract. 
+
+The core storage for the lockup and vesting plans is in the ./contracts/sharedContracts/LockedStorage.sol and VestingStorage.sol files, which has the structs, mapping and events that are used throughout the primary plan contract files.  
+
+ERC721Delegate contract is a special iteration of the ERC721Enumerable extension that enables users to delegate their NFT to another wallet, which is optimized for snapshot voting strategies. The snapshot optimized contracts inherit the ERC721Delegate, while the on-chain voting contracts inherit the ERC721Enumerable for gas savings and efficiencies. 
+
 There are technical documentation in this repository that describe the contracts functions and uses, and technical requirements. For more information please visit [Hedgey Website](https://hedgey.finance)
 
 ## Testing
