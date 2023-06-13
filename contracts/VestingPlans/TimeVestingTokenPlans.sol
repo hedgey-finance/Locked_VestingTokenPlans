@@ -169,8 +169,8 @@ contract TimeVestingTokenPlans is ERC721Delegate, VestingStorage, ReentrancyGuar
   /****NFT FRANSFER SPECIAL OVERRIDE FUNCTIONS*********************************************************************************************************************************************/
 
   function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721) {
-    require(plans[tokenId].adminTransferOBO, 'not transferable by vesting admin');
-    require(msg.sender == plans[tokenId].vestingAdmin, 'not vesting Admin');
+    require(plans[tokenId].adminTransferOBO, 'not transferable');
+    require(msg.sender == plans[tokenId].vestingAdmin, '!vesting Admin');
     _transfer(from, to, tokenId);
     emit PlanTransferredByVestingAdmin(tokenId, from, to);
   }

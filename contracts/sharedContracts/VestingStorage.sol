@@ -75,7 +75,7 @@ contract VestingStorage {
 
   /// @dev function to calculate the end date in seconds of a given unlock timelock
   /// @param planId is the NFT token ID
-  function planEnd(uint256 planId) external view returns (uint256 end) {
+  function planEnd(uint256 planId) public view returns (uint256 end) {
     Plan memory plan = plans[planId];
     end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
   }
