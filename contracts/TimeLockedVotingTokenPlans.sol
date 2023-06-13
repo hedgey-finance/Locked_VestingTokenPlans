@@ -11,11 +11,13 @@ import './sharedContracts/VotingVault.sol';
 import './sharedContracts/URIAdmin.sol';
 import './sharedContracts/LockedStorage.sol';
 
+import 'hardhat/console.sol';
+
 contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, ReentrancyGuard, URIAdmin {
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
 
-  mapping(uint256 => address) internal votingVaults;
+  mapping(uint256 => address) public votingVaults;
 
   event VotingVaultCreated(uint256 indexed id, address vaultAddress);
 
@@ -40,13 +42,10 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
   ) external nonReentrant {
     require(recipient != address(0), '01');
     require(token != address(0), '02');
-    require(amount > 0, '03');
-    require(rate > 0, '04');
-    require(rate <= amount, '05');
+    (uint256 end, bool valid) = TimelockLibrary.validateEnd(start, cliff, amount, rate, period);
+    require(valid);
     _planIds.increment();
     uint256 newPlanId = _planIds.current();
-    uint256 end = TimelockLibrary.endDate(start, amount, rate, period);
-    require(cliff <= end, 'SV12');
     TransferHelper.transferTokens(token, msg.sender, address(this), amount);
     plans[newPlanId] = Plan(token, amount, start, cliff, rate, period);
     _safeMint(recipient, newPlanId);
@@ -70,6 +69,37 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
       planIds[i] = planId;
     }
     _redeemPlans(planIds, block.timestamp);
+  }
+
+  function segmentPlan(uint256 planId, uint256[] memory segmentAmounts) external nonReentrant {
+    for (uint256 i; i < segmentAmounts.length; i++) {
+      _segmentPlan(msg.sender, planId, segmentAmounts[i]);
+    }
+  }
+
+  function segmentAndDelegatePlans(
+    uint256 planId,
+    uint256[] memory segmentAmounts,
+    address[] memory delegatees
+  ) external nonReentrant {
+    for (uint256 i; i < segmentAmounts.length; i++) {
+      uint256 newPlanId = _segmentPlan(msg.sender, planId, segmentAmounts[i]);
+      _delegate(msg.sender, newPlanId, delegatees[i]);
+    }
+  }
+
+  function combinePlans(uint256 planId0, uint256 planId1) external nonReentrant {
+    _combinePlans(msg.sender, planId0, planId1);
+  }
+
+  function redeemAndTransfer(uint256 planId, address to) external virtual nonReentrant {
+    (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(
+      planId,
+      block.timestamp,
+      block.timestamp
+    );
+    if (balance > 0) _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
+    if (remainder > 0) _transfer(msg.sender, to, planId);
   }
 
   /****CORE INTERNAL FUNCTIONS*********************************************************************************************************************************************/
@@ -111,19 +141,165 @@ contract TimeLockedVotingTokenPlans is ERC721Enumerable, LockedStorage, Reentran
     emit PlanTokensUnlocked(planId, balance, remainder, latestUnlock);
   }
 
+  function _segmentPlan(address holder, uint256 planId, uint256 segmentAmount) internal returns (uint256 newPlanId) {
+    require(ownerOf(planId) == holder, '!holder');
+    Plan memory plan = plans[planId];
+    require(segmentAmount < plan.amount, 'amount error');
+    uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
+    _planIds.increment();
+    newPlanId = _planIds.current();
+    _safeMint(holder, newPlanId);
+    uint256 planAmount = plan.amount - segmentAmount;
+    plans[planId].amount = planAmount;
+    uint256 planRate = (plan.rate * ((planAmount * (10 ** 18)) / plan.amount)) / (10 ** 18);
+    plans[planId].rate = planRate;
+    uint256 segmentRate = plan.rate - planRate;
+    (uint256 planEnd, bool validPlan) = TimelockLibrary.validateEnd(plan.start, plan.cliff, planAmount, planRate, plan.period);
+    (uint256 segmentEnd, bool validSegment) = TimelockLibrary.validateEnd(plan.start, plan.cliff, segmentAmount, segmentRate, plan.period);
+    require(validPlan && validSegment, 'invalid new plans');
+    uint256 endCheck = segmentOriginalEnd[planId] == 0 ? end : segmentOriginalEnd[planId];
+    require(planEnd >= endCheck, 'plan end error');
+    require(segmentEnd >= endCheck, 'segmentEnd error');
+    plans[newPlanId] = Plan(plan.token, segmentAmount, plan.start, plan.cliff, segmentRate, plan.period);
+    if (segmentOriginalEnd[planId] == 0) {
+      segmentOriginalEnd[planId] = end;
+      segmentOriginalEnd[newPlanId] = end;
+    } else {
+      // dont change the planId original end date, but set this segment to the plans original end date
+      segmentOriginalEnd[newPlanId] = segmentOriginalEnd[planId];
+    }
+    // now we have to do the onchain stuff if there is a voting vault
+    if (votingVaults[planId] != address(0)) {
+      // pull tokens back to contract here
+      VotingVault(votingVaults[planId]).withdrawTokens(address(this), segmentAmount);
+      // setup a new voting vault
+      _setupVoting(holder, newPlanId);
+    }
+    emit PlanSegmented(
+      planId,
+      newPlanId,
+      planAmount,
+      planRate,
+      segmentAmount,
+      segmentRate,
+      plan.start,
+      plan.cliff,
+      plan.period,
+      planEnd
+    );
+  }
+
+  function _combinePlans(address holder, uint256 planId0, uint256 planId1) internal {
+    require(ownerOf(planId0) == holder, '!holder');
+    require(ownerOf(planId1) == holder, '!holder');
+    Plan memory plan0 = plans[planId0];
+    Plan memory plan1 = plans[planId1];
+    require(plan0.token == plan1.token, 'token error');
+    require(plan0.start == plan1.start, 'start error');
+    require(plan0.cliff == plan1.cliff, 'cliff error');
+    require(plan0.period == plan1.period, 'period error');
+    uint256 plan0End = TimelockLibrary.endDate(plan0.start, plan0.amount, plan0.rate, plan0.period);
+    uint256 plan1End = TimelockLibrary.endDate(plan1.start, plan1.amount, plan1.rate, plan1.period);
+    // either they have the same end date, or if they dont then they should have the same original end date if they were segmented
+    require(plan0End == plan1End || segmentOriginalEnd[planId0] == segmentOriginalEnd[planId1], 'end error');
+    address vault0 = votingVaults[planId0];
+    address vault1 = votingVaults[planId1];
+    if (vault0 != address(0)) {
+      plans[planId0].amount += plans[planId1].amount;
+      plans[planId0].rate += plans[planId1].rate;
+      uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
+      if (end < plan0End) {
+        require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+      }
+      // set this as primary voting vault, check if vault1 has anything
+      if (vault1 != address(0)) {
+        // transfer funds from vault1 to vault0
+        VotingVault(vault1).withdrawTokens(vault0, plan1.amount);
+      } else {
+        // send funds from here to vault 0
+        TransferHelper.withdrawTokens(plan0.token, vault0, plan1.amount);
+      }
+      delete plans[planId1];
+      _burn(planId1);
+      emit PlansCombined(
+        planId0,
+        planId1,
+        planId0,
+        plans[planId0].amount,
+        plans[planId0].rate,
+        plan0.start,
+        plan0.cliff,
+        plan0.period,
+        end
+      );
+    } else if (vault1 != address(0)) {
+      plans[planId1].amount += plans[planId0].amount;
+      plans[planId1].rate += plans[planId0].rate;
+      uint256 end = TimelockLibrary.endDate(plan1.start, plans[planId1].amount, plans[planId1].rate, plan1.period);
+      if (end < plan1End) {
+        require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+      }
+      // we know that vault 0 is empty, so just need to send tokens to vault 1 then
+      TransferHelper.withdrawTokens(plan0.token, vault1, plan0.amount);
+      // now we keep plan1 instead
+      delete plans[planId0];
+      _burn(planId0);
+      emit PlansCombined(
+        planId0,
+        planId1,
+        planId1,
+        plans[planId1].amount,
+        plans[planId1].rate,
+        plan1.start,
+        plan1.cliff,
+        plan1.period,
+        end
+      );
+    } else {
+      plans[planId0].amount += plans[planId1].amount;
+      plans[planId0].rate += plans[planId1].rate;
+      uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
+      if (end < plan0End) {
+        require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+      }
+      delete plans[planId1];
+      _burn(planId1);
+      emit PlansCombined(
+        planId0,
+        planId1,
+        planId0,
+        plans[planId0].amount,
+        plans[planId0].rate,
+        plan0.start,
+        plan0.cliff,
+        plan0.period,
+        end
+      );
+    }
+  }
+
   /****VOTING FUNCTIONS*********************************************************************************************************************************************/
 
-  function setupVoting(uint256 planId) external {
-    require(ownerOf(planId) == msg.sender);
+  function setupVoting(uint256 planId) external nonReentrant {
+    _setupVoting(msg.sender, planId);
+  }
+
+  function delegate(uint256 planId, address delegatee) external nonReentrant {
+    _delegate(msg.sender, planId, delegatee);
+  }
+
+  function _setupVoting(address holder, uint256 planId) internal returns (address) {
+    require(ownerOf(planId) == holder);
     Plan memory plan = plans[planId];
-    VotingVault vault = new VotingVault(plan.token, msg.sender);
+    VotingVault vault = new VotingVault(plan.token, holder);
     votingVaults[planId] = address(vault);
     TransferHelper.withdrawTokens(plan.token, address(vault), plan.amount);
     emit VotingVaultCreated(planId, address(vault));
+    return address(vault);
   }
 
-  function delegatePlanTokens(uint256 planId, address delegatee) external {
-    require(ownerOf(planId) == msg.sender);
+  function _delegate(address holder, uint256 planId, address delegatee) internal {
+    require(ownerOf(planId) == holder);
     address vault = votingVaults[planId];
     require(votingVaults[planId] != address(0), 'no vault setup');
     VotingVault(vault).delegateTokens(delegatee);

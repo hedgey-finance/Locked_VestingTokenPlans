@@ -31,30 +31,7 @@ const setup = async () => {
     }
 }
 
-const setupLinear = async () => {
-    const [admin, a, b, c, d] = await ethers.getSigners();
-    const Streamer = await ethers.getContractFactory('StreamingNFT');
-    const Vester = await ethers.getContractFactory('StreamVestingNFT');
-    const BatchVester = await ethers.getContractFactory('BatchVester');
-    const batchVester = await BatchVester.deploy();
-    const streamer = await Streamer.deploy('Streamers', 'STMY');
-    const vester = await Vester.deploy('Vester', 'VST', streamer.address, streamer.address);
-    const Token = await ethers.getContractFactory('Token');
-    const token = await Token.deploy(C.E18_1000000, 'Token', 'TK');
-    return {
-        admin,
-        a,
-        b,
-        c,
-        d,
-        streamer,
-        vester,
-        batchVester,
-        token,
-    }
-}
 
 module.exports = {
-    setup,
-    setupLinear,
+    setup
 }

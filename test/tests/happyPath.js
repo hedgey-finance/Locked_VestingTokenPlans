@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { setup, setupLinear } = require('../fixtures');
+const { setup } = require('../fixtures');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const C = require('../constants');
 const { BigNumber } = require('ethers');
@@ -120,9 +120,9 @@ module.exports = (vesting, voting, params) => {
     let totalAmount = amount.mul(batchSize);
     let batch = Array(batchSize).fill(singlePlan);
     if (vesting) {
-      await batcher.batchVestingPlans(hedgey.address, token.address, totalAmount, batch, period, admin.address, false);
+      await batcher.batchVestingPlans(hedgey.address, token.address, totalAmount, batch, period, admin.address, false, '0');
     } else {
-      await batcher.batchLockingPlans(hedgey.address, token.address, totalAmount, batch, period);
+      await batcher.batchLockingPlans(hedgey.address, token.address, totalAmount, batch, period, '0');
     }
   });
 };

@@ -15,7 +15,7 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, VestingStorage, Reentr
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
 
-  mapping(uint256 => address) internal votingVaults;
+  mapping(uint256 => address) public votingVaults;
 
   event VotingVaultCreated(uint256 indexed id, address vaultAddress);
 
@@ -42,13 +42,10 @@ contract TimeVestingVotingTokenPlans is ERC721Enumerable, VestingStorage, Reentr
   ) external nonReentrant {
     require(recipient != address(0), '01');
     require(token != address(0), '02');
-    require(amount > 0, '03');
-    require(rate > 0, '04');
-    require(rate <= amount, '05');
+    (uint256 end, bool valid) = TimelockLibrary.validateEnd(start, cliff, amount, rate, period);
+    require(valid);
     _planIds.increment();
     uint256 newPlanId = _planIds.current();
-    uint256 end = TimelockLibrary.endDate(start, amount, rate, period);
-    require(cliff <= end, 'SV12');
     TransferHelper.transferTokens(token, msg.sender, address(this), amount);
     plans[newPlanId] = Plan(token, amount, start, cliff, rate, period, vestingAdmin, adminTransferOBO);
     _safeMint(recipient, newPlanId);

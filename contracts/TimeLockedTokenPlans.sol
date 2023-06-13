@@ -10,6 +10,8 @@ import './libraries/TimelockLibrary.sol';
 import './sharedContracts/URIAdmin.sol';
 import './sharedContracts/LockedStorage.sol';
 
+import 'hardhat/console.sol';
+
 contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard, URIAdmin {
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
@@ -35,13 +37,10 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
   ) external nonReentrant {
     require(recipient != address(0), '01');
     require(token != address(0), '02');
-    require(amount > 0, '03');
-    require(rate > 0, '04');
-    require(rate <= amount, '05');
+    (uint256 end, bool valid) = TimelockLibrary.validateEnd(start, cliff, amount, rate, period);
+    require(valid);
     _planIds.increment();
     uint256 newPlanId = _planIds.current();
-    uint256 end = TimelockLibrary.endDate(start, amount, rate, period);
-    require(cliff <= end, 'SV12');
     TransferHelper.transferTokens(token, msg.sender, address(this), amount);
     plans[newPlanId] = Plan(token, amount, start, cliff, rate, period);
     _safeMint(recipient, newPlanId);
@@ -65,6 +64,37 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
       planIds[i] = planId;
     }
     _redeemPlans(planIds, block.timestamp);
+  }
+
+  function segmentPlans(uint256 planId, uint256[] memory segmentAmounts) external nonReentrant {
+    for (uint256 i; i < segmentAmounts.length; i++) {
+      _segmentPlan(msg.sender, planId, segmentAmounts[i]);
+    }
+  }
+
+  function segmentAndDelegatePlans(
+    uint256 planId,
+    uint256[] memory segmentAmounts,
+    address[] memory delegatees
+  ) external nonReentrant {
+    for (uint256 i; i < segmentAmounts.length; i++) {
+      uint256 newPlanId = _segmentPlan(msg.sender, planId, segmentAmounts[i]);
+      _delegateToken(delegatees[i], newPlanId);
+    }
+  }
+
+  function combinePlans(uint256 planId0, uint256 planId1) external nonReentrant {
+    _combinePlans(msg.sender, planId0, planId1);
+  }
+
+  function redeemAndTransfer(uint256 planId, address to) external virtual nonReentrant {
+    (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(
+      planId,
+      block.timestamp,
+      block.timestamp
+    );
+    if (balance > 0) _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
+    if (remainder > 0) _transfer(msg.sender, to, planId);
   }
 
   /****CORE INTERNAL FUNCTIONS*********************************************************************************************************************************************/
@@ -98,6 +128,85 @@ contract TimeLockedTokenPlans is ERC721Delegate, LockedStorage, ReentrancyGuard,
     }
     TransferHelper.withdrawTokens(plan.token, holder, balance);
     emit PlanTokensUnlocked(planId, balance, remainder, latestUnlock);
+  }
+
+  function _segmentPlan(address holder, uint256 planId, uint256 segmentAmount) internal returns (uint256 newPlanId) {
+    require(ownerOf(planId) == holder, '!holder');
+    Plan memory plan = plans[planId];
+    require(segmentAmount < plan.amount, 'amount error');
+    uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
+    // console.log('original plan end: ', end);
+    _planIds.increment();
+    newPlanId = _planIds.current();
+    _safeMint(holder, newPlanId);
+    uint256 planAmount = plan.amount - segmentAmount;
+    plans[planId].amount = planAmount;
+    uint256 planRate = (plan.rate * ((planAmount * (10 ** 18)) / plan.amount)) / (10 ** 18);
+    plans[planId].rate = planRate;
+    uint256 segmentRate = plan.rate - planRate;
+    (uint256 planEnd, bool validPlan) = TimelockLibrary.validateEnd(plan.start, plan.cliff, planAmount, planRate, plan.period);
+    (uint256 segmentEnd, bool validSegment) = TimelockLibrary.validateEnd(plan.start, plan.cliff, segmentAmount, segmentRate, plan.period);
+    require(validPlan && validSegment, 'invalid new plans');
+    // console.log('contract planEnd: ', planEnd);
+    // console.log('contract segmentEnd: ', segmentEnd);
+    uint256 endCheck = segmentOriginalEnd[planId] == 0 ? end : segmentOriginalEnd[planId];
+    require(planEnd >= endCheck, 'plan end error');
+    require(segmentEnd >= endCheck, 'segmentEnd error');
+    plans[newPlanId] = Plan(plan.token, segmentAmount, plan.start, plan.cliff, segmentRate, plan.period);
+    if (segmentOriginalEnd[planId] == 0) {
+      segmentOriginalEnd[planId] = end;
+      segmentOriginalEnd[newPlanId] = end;
+    } else {
+      segmentOriginalEnd[newPlanId] = segmentOriginalEnd[planId];
+    }
+    emit PlanSegmented(
+      planId,
+      newPlanId,
+      planAmount,
+      planRate,
+      segmentAmount,
+      segmentRate,
+      plan.start,
+      plan.cliff,
+      plan.period,
+      planEnd
+    );
+  }
+
+  function _combinePlans(address holder, uint256 planId0, uint256 planId1) internal {
+    require(ownerOf(planId0) == holder, '!holder');
+    require(ownerOf(planId1) == holder, '!holder');
+    Plan memory plan0 = plans[planId0];
+    Plan memory plan1 = plans[planId1];
+    require(plan0.token == plan1.token, 'token error');
+    require(plan0.start == plan1.start, 'start error');
+    require(plan0.cliff == plan1.cliff, 'cliff error');
+    require(plan0.period == plan1.period, 'period error');
+    uint256 plan0End = TimelockLibrary.endDate(plan0.start, plan0.amount, plan0.rate, plan0.period);
+    uint256 plan1End = TimelockLibrary.endDate(plan1.start, plan1.amount, plan1.rate, plan1.period);
+    // either they have the same end date, or if they dont then they should have the same original end date if they were segmented
+    require(plan0End == plan1End || segmentOriginalEnd[planId0] == segmentOriginalEnd[planId1], 'end error');
+    // add em together and delete plan 1
+    plans[planId0].amount += plans[planId1].amount;
+    plans[planId0].rate += plans[planId1].rate;
+    uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
+    if (end < plan0End) {
+      console.log('end was lower, have to check original');
+      require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+    }
+    delete plans[planId1];
+    _burn(planId1);
+    emit PlansCombined(
+      planId0,
+      planId1,
+      planId0,
+      plans[planId0].amount,
+      plans[planId0].rate,
+      plan0.start,
+      plan0.cliff,
+      plan0.period,
+      end
+    );
   }
 
   /****VOTING FUNCTIONS*********************************************************************************************************************************************/
