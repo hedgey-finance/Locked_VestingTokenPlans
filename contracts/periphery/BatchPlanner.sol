@@ -14,12 +14,15 @@ contract BatchPlanner {
     uint256 rate;
   }
 
+  event BatchCreated(uint256 mintType);
+
   function batchLockingPlans(
     address locker,
     address token,
     uint256 totalAmount,
     Plan[] memory plans,
-    uint256 period
+    uint256 period,
+    uint256 mintType
   ) external {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
     SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
@@ -34,6 +37,7 @@ contract BatchPlanner {
         period
       );
     }
+    emit BatchCreated(mintType);
   }
 
   function batchVestingPlans(
@@ -43,7 +47,8 @@ contract BatchPlanner {
     Plan[] memory plans,
     uint256 period,
     address vestingAdmin,
-    bool adminTransferOBO
+    bool adminTransferOBO,
+    uint256 mintType
   ) external {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
     SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
@@ -60,5 +65,6 @@ contract BatchPlanner {
         adminTransferOBO
       );
     }
+    emit BatchCreated(mintType);
   }
 }
