@@ -3,12 +3,12 @@ pragma solidity 0.8.20;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
-import './ERC721Delegate/ERC721Delegate.sol';
+import '../ERC721Delegate/ERC721Delegate.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import './libraries/TransferHelper.sol';
-import './libraries/TimelockLibrary.sol';
-import './sharedContracts/URIAdmin.sol';
-import './sharedContracts/VestingStorage.sol';
+import '../libraries/TransferHelper.sol';
+import '../libraries/TimelockLibrary.sol';
+import '../sharedContracts/URIAdmin.sol';
+import '../sharedContracts/VestingStorage.sol';
 
 contract TimeVestingTokenPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, URIAdmin {
   using Counters for Counters.Counter;

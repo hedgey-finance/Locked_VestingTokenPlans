@@ -5,11 +5,11 @@ import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
 import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
-import './libraries/TransferHelper.sol';
-import './libraries/TimelockLibrary.sol';
-import './sharedContracts/VotingVault.sol';
-import './sharedContracts/URIAdmin.sol';
-import './sharedContracts/VestingStorage.sol';
+import '../libraries/TransferHelper.sol';
+import '../libraries/TimelockLibrary.sol';
+import '../sharedContracts/VotingVault.sol';
+import '../sharedContracts/URIAdmin.sol';
+import '../sharedContracts/VestingStorage.sol';
 
 contract TimeVestingVotingTokenPlans is ERC721Enumerable, VestingStorage, ReentrancyGuard, URIAdmin {
   using Counters for Counters.Counter;
