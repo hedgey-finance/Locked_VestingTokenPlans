@@ -1,7 +1,7 @@
 {
-  "name": "clifflocknft",
+  "name": "Lockup and Vesting Token Plans",
   "version": "1.0.0",
-  "description": "repo for cliff locked NFTs where tokens unlock discretely at specific cliffs",
+  "description": "Smart Contract Repository for the Lockup and Vesting Token Plans",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
