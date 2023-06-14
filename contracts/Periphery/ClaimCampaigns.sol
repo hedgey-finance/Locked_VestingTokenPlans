@@ -3,21 +3,20 @@ pragma solidity 0.8.20;
 
 import '../libraries/TransferHelper.sol';
 import '../libraries/TimelockLibrary.sol';
-import '../interfaces/IVestingTokenPlans.sol';
-import '../interfaces/ILockedTokenPlans.sol';
-import '../interfaces/ITimeLock.sol';
+import '../interfaces/IVestingPlans.sol';
+import '../interfaces/ILockupPlans.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/utils/cryptography/MerkleProof.sol';
 
-contract ClaimCampaigner is ReentrancyGuard {
+contract ClaimCampaigns is ReentrancyGuard {
   uint256 private _campaignIds;
 
-  address private tipReceiver;
+  address private feeCollector;
+  address internal feeLocker;
 
   enum TokenLockup {
     Unlocked,
-    Cliff,
-    Linear,
+    Locked,
     Vesting
   }
 
@@ -33,6 +32,7 @@ contract ClaimCampaigner is ReentrancyGuard {
     address manager;
     address token;
     uint256 amount;
+    uint256 end;
     TokenLockup tokenLockup;
     bytes32 root;
   }
@@ -47,34 +47,32 @@ contract ClaimCampaigner is ReentrancyGuard {
   event CampaignStarted(uint256 indexed id, Campaign campaign);
   event ClaimLockupCreated(uint256 indexed id, ClaimLockup claimLockup);
 
-  constructor(address _tipReceiver) {
-    tipReceiver = _tipReceiver;
+  constructor(address _feeCollector, address _feeLocker) {
+    feeCollector = _feeCollector;
+    feeLocker = _feeLocker;
   }
 
-  function createCampaign(
-    Campaign memory campaign,
-    ClaimLockup memory claimLockup,
-    uint256 hedgeyTip
-  ) external nonReentrant {
+  function createCampaign(Campaign memory campaign, ClaimLockup memory claimLockup, uint256 fee) external nonReentrant {
     require(campaign.token != address(0));
     require(campaign.manager != address(0));
     require(campaign.amount > 0);
+    require(campaign.end > block.timestamp);
     _campaignIds++;
     TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount);
-    if (hedgeyTip > 0) TransferHelper.transferTokens(campaign.token, msg.sender, tipReceiver, hedgeyTip);
+    if (fee > 0) {
+      SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), feeLocker, fee);
+      ILockupPlans(feeLocker).createPlan(feeCollector, campaign.token, fee, block.timestamp, 0, 1, 1);
+    }
     if (campaign.tokenLockup != TokenLockup.Unlocked) {
       require(claimLockup.tokenLocker != address(0));
-      if (campaign.tokenLockup == TokenLockup.Cliff) require(claimLockup.cliff > block.timestamp);
-      if (campaign.tokenLockup == TokenLockup.Linear || campaign.tokenLockup == TokenLockup.Vesting) {
-        (uint256 end, bool valid) = TimelockLibrary.validateEnd(
-          claimLockup.start,
-          claimLockup.cliff,
-          campaign.amount,
-          claimLockup.rate,
-          claimLockup.period
-        );
-        require(valid);
-      }
+      (uint256 end, bool valid) = TimelockLibrary.validateEnd(
+        claimLockup.start,
+        claimLockup.cliff,
+        campaign.amount,
+        claimLockup.rate,
+        claimLockup.period
+      );
+      require(valid);
       claimLockups[_campaignIds] = claimLockup;
       SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), claimLockup.tokenLocker, campaign.amount);
       emit ClaimLockupCreated(_campaignIds, claimLockup);
@@ -86,6 +84,7 @@ contract ClaimCampaigner is ReentrancyGuard {
   function claimTokens(uint256 campaignId, bytes32[] memory proof, uint256 claimAmount) external nonReentrant {
     require(!claimed[campaignId][msg.sender], 'already claimed');
     Campaign memory campaign = campaigns[campaignId];
+    require(campaign.end > block.timestamp, 'campaign ended');
     require(verify(campaign.root, proof, msg.sender, claimAmount), '!eligible');
     require(campaign.amount >= claimAmount, 'campaign unfunded');
     claimed[campaignId][msg.sender] = true;
@@ -98,10 +97,8 @@ contract ClaimCampaigner is ReentrancyGuard {
       TransferHelper.withdrawTokens(campaign.token, msg.sender, claimAmount);
     } else {
       ClaimLockup memory c = claimLockups[campaignId];
-      if (campaign.tokenLockup == TokenLockup.Cliff) {
-        ITimeLock(c.tokenLocker).createNFT(msg.sender, claimAmount, campaign.token, c.cliff);
-      } else if (campaign.tokenLockup == TokenLockup.Linear) {
-        ILockedTokenPlans(c.tokenLocker).createPlan(
+      if (campaign.tokenLockup == TokenLockup.Locked) {
+        ILockupPlans(c.tokenLocker).createPlan(
           msg.sender,
           campaign.token,
           claimAmount,
@@ -111,7 +108,7 @@ contract ClaimCampaigner is ReentrancyGuard {
           c.period
         );
       } else {
-        IVestingTokenPlans(c.tokenLocker).createPlan(
+        IVestingPlans(c.tokenLocker).createPlan(
           msg.sender,
           campaign.token,
           claimAmount,

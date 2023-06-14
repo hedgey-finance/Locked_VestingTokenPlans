@@ -3,7 +3,7 @@ pragma solidity 0.8.20;
 
 import '../libraries/TimelockLibrary.sol';
 
-contract LockedStorage {
+contract LockupStorage {
   /// @dev the timelock is the storage in a struct of the tokens that are currently being timelocked
   /// @dev token is the token address being timelocked
   /// @dev amount is the total amount of tokens in the timelock, which is comprised of the balance and the remainder

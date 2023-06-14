@@ -1,6 +1,6 @@
-# Locked_VestingTokenPlans
+# Token Lockup and Vesting Plans
 
-Locked and Vesting Token Plans are the backbone contracts for supporting responsible token allocations to investors, employees and contributors. This repository contains the smart contracts (EVM compatible) that are used by Hedgey to bring the products to life.  
+Token Lockup and Vesting Plans are the backbone contracts for supporting responsible token allocations to investors, employees and contributors. This repository contains the smart contracts (EVM compatible) that are used by Hedgey to bring the products to life.  
 
 The plans lock up ERC20 tokens, and then mint a recipient an ERC721 token to represent their right to unlock those tokens based on time vesting and time unlocking. The schedule of vesting and unlocking is linear, but periodic. Periods are based on seconds, and so may be per second unlocking, or can unlock each day, week, or any number of periodic frequency based on the same number of seconds. 
 
