@@ -2,8 +2,8 @@
 pragma solidity 0.8.20;
 
 import '../libraries/TransferHelper.sol';
-import '../interfaces/IVestingPlans.sol';
-import '../interfaces/ILockupPlans.sol';
+import '../interfaces/IVestingTokenPlans.sol';
+import '../interfaces/ILockedTokenPlans.sol';
 
 contract BatchPlanner {
   struct Plan {
@@ -14,20 +14,17 @@ contract BatchPlanner {
     uint256 rate;
   }
 
-  event BatchCreated(uint256 mintType);
-
   function batchLockingPlans(
     address locker,
     address token,
     uint256 totalAmount,
     Plan[] memory plans,
-    uint256 period,
-    uint256 mintType
+    uint256 period
   ) external {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
     SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
     for (uint16 i; i < plans.length; i++) {
-      ILockupPlans(locker).createPlan(
+      ILockedTokenPlans(locker).createPlan(
         plans[i].recipient,
         token,
         plans[i].amount,
@@ -37,7 +34,6 @@ contract BatchPlanner {
         period
       );
     }
-    emit BatchCreated(mintType);
   }
 
   function batchVestingPlans(
@@ -47,13 +43,12 @@ contract BatchPlanner {
     Plan[] memory plans,
     uint256 period,
     address vestingAdmin,
-    bool adminTransferOBO,
-    uint256 mintType
+    bool adminTransferOBO
   ) external {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
     SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
     for (uint16 i; i < plans.length; i++) {
-      IVestingPlans(locker).createPlan(
+      IVestingTokenPlans(locker).createPlan(
         plans[i].recipient,
         token,
         plans[i].amount,
@@ -65,6 +60,5 @@ contract BatchPlanner {
         adminTransferOBO
       );
     }
-    emit BatchCreated(mintType);
   }
 }
