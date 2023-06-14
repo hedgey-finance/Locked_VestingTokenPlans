@@ -2,8 +2,8 @@
 pragma solidity 0.8.20;
 
 import '../libraries/TransferHelper.sol';
-import '../interfaces/IVestingTokenPlans.sol';
-import '../interfaces/ILockedTokenPlans.sol';
+import '../interfaces/IVestingPlans.sol';
+import '../interfaces/ILockupPlans.sol';
 
 contract BatchPlanner {
   struct Plan {
@@ -27,7 +27,7 @@ contract BatchPlanner {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
     SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
     for (uint16 i; i < plans.length; i++) {
-      ILockedTokenPlans(locker).createPlan(
+      ILockupPlans(locker).createPlan(
         plans[i].recipient,
         token,
         plans[i].amount,
@@ -53,7 +53,7 @@ contract BatchPlanner {
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
     SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
     for (uint16 i; i < plans.length; i++) {
-      IVestingTokenPlans(locker).createPlan(
+      IVestingPlans(locker).createPlan(
         plans[i].recipient,
         token,
         plans[i].amount,
