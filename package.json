@@ -1,5 +1,5 @@
 {
-  "name": "Lockup and Vesting Token Plans",
+  "name": "lockup_vestingtokenplans",
   "version": "1.0.0",
   "description": "Smart Contract Repository for the Lockup and Vesting Token Plans",
   "main": "index.js",
