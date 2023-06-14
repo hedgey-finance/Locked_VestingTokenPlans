@@ -13,6 +13,7 @@ contract ClaimCampaigns is ReentrancyGuard {
 
   address private feeCollector;
   address internal feeLocker;
+  uint256 internal feeLockupTime;
 
   enum TokenLockup {
     Unlocked,
@@ -47,9 +48,10 @@ contract ClaimCampaigns is ReentrancyGuard {
   event CampaignStarted(uint256 indexed id, Campaign campaign);
   event ClaimLockupCreated(uint256 indexed id, ClaimLockup claimLockup);
 
-  constructor(address _feeCollector, address _feeLocker) {
+  constructor(address _feeCollector, address _feeLocker, uint256 _feeLockupTime) {
     feeCollector = _feeCollector;
     feeLocker = _feeLocker;
+    feeLockupTime = _feeLockupTime;
   }
 
   function createCampaign(Campaign memory campaign, ClaimLockup memory claimLockup, uint256 fee) external nonReentrant {
@@ -61,7 +63,9 @@ contract ClaimCampaigns is ReentrancyGuard {
     TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount);
     if (fee > 0) {
       SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), feeLocker, fee);
-      ILockupPlans(feeLocker).createPlan(feeCollector, campaign.token, fee, block.timestamp, 0, 1, 1);
+      
+      uint256 rate = fee / feeLockupTime;
+      ILockupPlans(feeLocker).createPlan(feeCollector, campaign.token, fee, block.timestamp, 0, rate, 1);
     }
     if (campaign.tokenLockup != TokenLockup.Unlocked) {
       require(claimLockup.tokenLocker != address(0));
