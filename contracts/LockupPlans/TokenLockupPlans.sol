@@ -10,8 +10,6 @@ import '../libraries/TimelockLibrary.sol';
 import '../sharedContracts/URIAdmin.sol';
 import '../sharedContracts/LockupStorage.sol';
 
-import 'hardhat/console.sol';
-
 contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URIAdmin {
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
@@ -140,7 +138,6 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     Plan memory plan = plans[planId];
     require(segmentAmount < plan.amount, 'amount error');
     uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
-    // console.log('original plan end: ', end);
     _planIds.increment();
     newPlanId = _planIds.current();
     _safeMint(holder, newPlanId);
@@ -152,8 +149,6 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     (uint256 planEnd, bool validPlan) = TimelockLibrary.validateEnd(plan.start, plan.cliff, planAmount, planRate, plan.period);
     (uint256 segmentEnd, bool validSegment) = TimelockLibrary.validateEnd(plan.start, plan.cliff, segmentAmount, segmentRate, plan.period);
     require(validPlan && validSegment, 'invalid new plans');
-    // console.log('contract planEnd: ', planEnd);
-    // console.log('contract segmentEnd: ', segmentEnd);
     uint256 endCheck = segmentOriginalEnd[planId] == 0 ? end : segmentOriginalEnd[planId];
     require(planEnd >= endCheck, 'plan end error');
     require(segmentEnd >= endCheck, 'segmentEnd error');

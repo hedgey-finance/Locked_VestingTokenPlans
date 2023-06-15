@@ -1,8 +1,7 @@
 const { ethers } = require('hardhat');
 const C = require('./constants');
-const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
-const setup = async () => {
+module.exports = async () => {
     const [admin, a, b, c, d] = await ethers.getSigners();
     const Locked = await ethers.getContractFactory('TokenLockupPlans');
     const locked = await Locked.deploy('TimeLock', 'TL');
@@ -14,8 +13,10 @@ const setup = async () => {
     const voteVest = await VoteVest.deploy('TimeLock', 'TL');
     const BatchPlanner = await ethers.getContractFactory('BatchPlanner');
     const batcher = await BatchPlanner.deploy();
+    const ClaimCampaigns = await ethers.getContractFactory('ClaimCampaigns');
+    const claimer = await ClaimCampaigns.deploy(admin.address, locked.address, C.MONTH, true);
     const Token = await ethers.getContractFactory('Token');
-    const token = await Token.deploy(C.E18_1000000.mul(1000), 'Token', 'TK');
+    const token = await Token.deploy(C.E18_1000000.mul(100000), 'Token', 'TK');
     return {
         admin,
         a,
@@ -28,10 +29,6 @@ const setup = async () => {
         voteVest,
         batcher,
         token,
+        claimer,
     }
-}
-
-
-module.exports = {
-    setup
 }

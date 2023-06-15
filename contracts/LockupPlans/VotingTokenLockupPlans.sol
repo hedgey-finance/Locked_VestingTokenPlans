@@ -11,8 +11,6 @@ import '../sharedContracts/VotingVault.sol';
 import '../sharedContracts/URIAdmin.sol';
 import '../sharedContracts/LockupStorage.sol';
 
-import 'hardhat/console.sol';
-
 contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGuard, URIAdmin {
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;

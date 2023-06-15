@@ -2,6 +2,7 @@ const C = require('./constants');
 const adminTests = require('./tests/adminTests');
 const happyPath = require('./tests/happyPath');
 const { segmentTests, segmentVotingTests, segmentErrorTests } = require('./tests/segmentTests');
+const { claimTests } = require('./tests/claimTests');
 
 // describe('Testing the URI Admin functions', () => {
 //   adminTests(true, false);
@@ -79,3 +80,15 @@ describe('Testing the Segmentation and Combination Methods', () => {
     segmentVotingTests(params);
   });
 });
+
+
+
+// describe('Testing the Unlocked Claim Campaign tests', () => {
+//   const totalRecipients = 14;
+//   nodes = {
+//     nodeA: 5,
+//     nodeB: 15
+//   }
+//   claimTests(totalRecipients, nodes);
+// });
+

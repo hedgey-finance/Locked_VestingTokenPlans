@@ -9,11 +9,11 @@ import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/utils/cryptography/MerkleProof.sol';
 
 contract ClaimCampaigns is ReentrancyGuard {
-  uint256 private _campaignIds;
 
   address private feeCollector;
   address internal feeLocker;
   uint256 internal feeLockupTime;
+  bool internal feeLocked;
 
   enum TokenLockup {
     Unlocked,
@@ -38,38 +38,54 @@ contract ClaimCampaigns is ReentrancyGuard {
     bytes32 root;
   }
 
-  mapping(uint256 => Campaign) public campaigns;
-  mapping(uint256 => ClaimLockup) public claimLockups;
+  mapping(bytes16 => bool) public usedIds;
+  mapping(bytes16 => Campaign) public campaigns;
+  mapping(bytes16 => ClaimLockup) public claimLockups;
 
   //maps campaign id to a wallet address, which is flipped to true when claimed
-  mapping(uint256 => mapping(address => bool)) public claimed;
+  mapping(bytes16 => mapping(address => bool)) public claimed;
 
   // events
-  event CampaignStarted(uint256 indexed id, Campaign campaign);
-  event ClaimLockupCreated(uint256 indexed id, ClaimLockup claimLockup);
+  event CampaignStarted(bytes16 indexed id, Campaign campaign);
+  event ClaimLockupCreated(bytes16 indexed id, ClaimLockup claimLockup);
+  event CampaignCancelled(bytes16 indexed id);
+  event TokensClaimed(bytes16 indexed id, address indexed claimer, uint256 amount);
 
-  constructor(address _feeCollector, address _feeLocker, uint256 _feeLockupTime) {
+  constructor(address _feeCollector, address _feeLocker, uint256 _feeLockupTime, bool _feeLocked) {
     feeCollector = _feeCollector;
     feeLocker = _feeLocker;
     feeLockupTime = _feeLockupTime;
+    feeLocked = _feeLocked;
   }
 
-  function createCampaign(Campaign memory campaign, ClaimLockup memory claimLockup, uint256 fee) external nonReentrant {
+  function feeCollectionUpdates(address _feeCollector, address _feeLocker, uint256 _feeLockupTime, bool _feeLocked) external {
+    require(msg.sender == feeCollector);
+    feeCollector = _feeCollector;
+    feeLocker = _feeLocker;
+    feeLockupTime = _feeLockupTime;
+    feeLocked = _feeLocked;
+  }
+
+  function createCampaign(bytes16 id, Campaign memory campaign, ClaimLockup memory claimLockup, uint256 fee) external nonReentrant {
+    require(!usedIds[id], 'already used');
+    usedIds[id] = true;
     require(campaign.token != address(0));
     require(campaign.manager != address(0));
     require(campaign.amount > 0);
     require(campaign.end > block.timestamp);
-    _campaignIds++;
-    TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount);
+    TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + fee);
     if (fee > 0) {
-      SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), feeLocker, fee);
-      
+      if (feeLocked) {
+        SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), feeLocker, fee);
       uint256 rate = fee / feeLockupTime;
       ILockupPlans(feeLocker).createPlan(feeCollector, campaign.token, fee, block.timestamp, 0, rate, 1);
+      } else {
+        TransferHelper.withdrawTokens(campaign.token, feeCollector, fee);
+      }
     }
     if (campaign.tokenLockup != TokenLockup.Unlocked) {
       require(claimLockup.tokenLocker != address(0));
-      (uint256 end, bool valid) = TimelockLibrary.validateEnd(
+      (, bool valid) = TimelockLibrary.validateEnd(
         claimLockup.start,
         claimLockup.cliff,
         campaign.amount,
@@ -77,15 +93,15 @@ contract ClaimCampaigns is ReentrancyGuard {
         claimLockup.period
       );
       require(valid);
-      claimLockups[_campaignIds] = claimLockup;
+      claimLockups[id] = claimLockup;
       SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), claimLockup.tokenLocker, campaign.amount);
-      emit ClaimLockupCreated(_campaignIds, claimLockup);
+      emit ClaimLockupCreated(id, claimLockup);
     }
-    campaigns[_campaignIds] = campaign;
-    emit CampaignStarted(_campaignIds, campaign);
+    campaigns[id] = campaign;
+    emit CampaignStarted(id, campaign);
   }
 
-  function claimTokens(uint256 campaignId, bytes32[] memory proof, uint256 claimAmount) external nonReentrant {
+  function claimTokens(bytes16 campaignId, bytes32[] memory proof, uint256 claimAmount) external nonReentrant {
     require(!claimed[campaignId][msg.sender], 'already claimed');
     Campaign memory campaign = campaigns[campaignId];
     require(campaign.end > block.timestamp, 'campaign ended');
@@ -125,23 +141,21 @@ contract ClaimCampaigns is ReentrancyGuard {
         );
       }
     }
+    emit TokensClaimed(campaignId, msg.sender, claimAmount);
   }
 
-  function cancelCampaign(uint256 campaignId) external nonReentrant {
+  function cancelCampaign(bytes16 campaignId) external nonReentrant {
     Campaign memory campaign = campaigns[campaignId];
     require(campaign.manager == msg.sender, '!manager');
     delete campaigns[campaignId];
     delete claimLockups[campaignId];
     TransferHelper.withdrawTokens(campaign.token, msg.sender, campaign.amount);
+    emit CampaignCancelled(campaignId);
   }
 
   function verify(bytes32 root, bytes32[] memory proof, address claimer, uint256 amount) public pure returns (bool) {
     bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(claimer, amount))));
     require(MerkleProof.verify(proof, root, leaf), 'Invalid proof');
     return true;
-  }
-
-  function currentCampaignId() public view returns (uint256) {
-    return _campaignIds;
   }
 }
