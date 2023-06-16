@@ -35,8 +35,8 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
     address vestingAdmin,
     bool adminTransferOBO
   ) external nonReentrant returns (uint256 newPlanId) {
-    require(recipient != address(0), '01');
-    require(token != address(0), '02');
+    require(recipient != address(0), '0_recipient');
+    require(token != address(0), '0_token');
     (uint256 end, bool valid) = TimelockLibrary.validateEnd(start, cliff, amount, rate, period);
     require(valid);
     _planIds.increment();
@@ -64,7 +64,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   }
 
   function partialRedeemPlans(uint256[] memory planIds, uint256 redemptionTime) external nonReentrant {
-    require(redemptionTime < block.timestamp, '!future redemption');
+    require(redemptionTime < block.timestamp, '!future');
     _redeemPlans(planIds, redemptionTime);
   }
 
@@ -117,7 +117,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
     uint256 remainder,
     uint256 latestUnlock
   ) internal {
-    require(ownerOf(planId) == holder, '!holder');
+    require(ownerOf(planId) == holder, '!owner');
     Plan memory plan = plans[planId];
     if (remainder == 0) {
       delete plans[planId];
@@ -169,13 +169,13 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /****NFT FRANSFER SPECIAL OVERRIDE FUNCTIONS*********************************************************************************************************************************************/
 
   function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721) {
-    require(plans[tokenId].adminTransferOBO, 'not transferable');
+    require(plans[tokenId].adminTransferOBO, '!transferrable');
     require(msg.sender == plans[tokenId].vestingAdmin, '!vesting Admin');
     _transfer(from, to, tokenId);
     emit PlanTransferredByVestingAdmin(tokenId, from, to);
   }
 
   function _safeTransfer(address from, address to, uint256 tokenId, bytes memory data) internal override {
-    revert('Not transferrable');
+    revert('!transferrable');
   }
 }

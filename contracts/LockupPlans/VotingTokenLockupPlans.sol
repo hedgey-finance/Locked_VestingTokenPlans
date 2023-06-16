@@ -38,8 +38,8 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     uint256 rate,
     uint256 period
   ) external nonReentrant returns (uint256 newPlanId) {
-    require(recipient != address(0), '01');
-    require(token != address(0), '02');
+    require(recipient != address(0), '0_recipient');
+    require(token != address(0), '0_token');
     (uint256 end, bool valid) = TimelockLibrary.validateEnd(start, cliff, amount, rate, period);
     require(valid);
     _planIds.increment();
@@ -55,7 +55,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   }
 
   function partialRedeemPlans(uint256[] memory planIds, uint256 redemptionTime) external nonReentrant {
-    require(redemptionTime < block.timestamp, '!future redemption');
+    require(redemptionTime < block.timestamp, '!future');
     _redeemPlans(planIds, redemptionTime);
   }
 
@@ -125,7 +125,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     uint256 remainder,
     uint256 latestUnlock
   ) internal {
-    require(ownerOf(planId) == holder, '!holder');
+    require(ownerOf(planId) == holder, '!owner');
     Plan memory plan = plans[planId];
     address vault = votingVaults[planId];
     if (remainder == 0) {
@@ -145,7 +145,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   }
 
   function _segmentPlan(address holder, uint256 planId, uint256 segmentAmount) internal returns (uint256 newPlanId) {
-    require(ownerOf(planId) == holder, '!holder');
+    require(ownerOf(planId) == holder, '!owner');
     Plan memory plan = plans[planId];
     require(segmentAmount < plan.amount, 'amount error');
     uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
@@ -168,14 +168,10 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
       segmentOriginalEnd[planId] = end;
       segmentOriginalEnd[newPlanId] = end;
     } else {
-      // dont change the planId original end date, but set this segment to the plans original end date
       segmentOriginalEnd[newPlanId] = segmentOriginalEnd[planId];
     }
-    // now we have to do the onchain stuff if there is a voting vault
     if (votingVaults[planId] != address(0)) {
-      // pull tokens back to contract here
       VotingVault(votingVaults[planId]).withdrawTokens(address(this), segmentAmount);
-      // setup a new voting vault
       _setupVoting(holder, newPlanId);
     }
     emit PlanSegmented(
@@ -193,8 +189,8 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   }
 
   function _combinePlans(address holder, uint256 planId0, uint256 planId1) internal returns (uint256 survivingPlan) {
-    require(ownerOf(planId0) == holder, '!holder');
-    require(ownerOf(planId1) == holder, '!holder');
+    require(ownerOf(planId0) == holder, '!owner');
+    require(ownerOf(planId1) == holder, '!owner');
     Plan memory plan0 = plans[planId0];
     Plan memory plan1 = plans[planId1];
     require(plan0.token == plan1.token, 'token error');
@@ -215,12 +211,9 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
       if (end < plan0End) {
         require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
       }
-      // set this as primary voting vault, check if vault1 has anything
       if (vault1 != address(0)) {
-        // transfer funds from vault1 to vault0
         VotingVault(vault1).withdrawTokens(vault0, plan1.amount);
       } else {
-        // send funds from here to vault 0
         TransferHelper.withdrawTokens(plan0.token, vault0, plan1.amount);
       }
       delete plans[planId1];
@@ -243,9 +236,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
       if (end < plan1End) {
         require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
       }
-      // we know that vault 0 is empty, so just need to send tokens to vault 1 then
       TransferHelper.withdrawTokens(plan0.token, vault1, plan0.amount);
-      // now we keep plan1 instead
       survivingPlan = planId1;
       delete plans[planId0];
       _burn(planId0);
@@ -302,7 +293,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   }
 
   function _setupVoting(address holder, uint256 planId) internal returns (address) {
-    require(ownerOf(planId) == holder);
+    require(ownerOf(planId) == holder, '!owner');
     Plan memory plan = plans[planId];
     VotingVault vault = new VotingVault(plan.token, holder);
     votingVaults[planId] = address(vault);
@@ -312,7 +303,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   }
 
   function _delegate(address holder, uint256 planId, address delegatee) internal {
-    require(ownerOf(planId) == holder);
+    require(ownerOf(planId) == holder, '!owner');
     address vault = votingVaults[planId];
     require(votingVaults[planId] != address(0), 'no vault setup');
     VotingVault(vault).delegateTokens(delegatee);

@@ -33,8 +33,8 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     uint256 rate,
     uint256 period
   ) external nonReentrant returns (uint256 newPlanId) {
-    require(recipient != address(0), '01');
-    require(token != address(0), '02');
+    require(recipient != address(0), '0_recipient');
+    require(token != address(0), '0_token');
     (uint256 end, bool valid) = TimelockLibrary.validateEnd(start, cliff, amount, rate, period);
     require(valid);
     _planIds.increment();
@@ -50,7 +50,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   }
 
   function partialRedeemPlans(uint256[] memory planIds, uint256 redemptionTime) external nonReentrant {
-    require(redemptionTime < block.timestamp, '!future redemption');
+    require(redemptionTime < block.timestamp, '!future');
     _redeemPlans(planIds, redemptionTime);
   }
 
@@ -77,7 +77,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     uint256[] memory segmentAmounts,
     address[] memory delegatees
   ) external nonReentrant returns (uint256[] memory newPlanIds) {
-    require(segmentAmounts.length == delegatees.length, '!length');
+    require(segmentAmounts.length == delegatees.length, 'length_error');
     newPlanIds = new uint256[](segmentAmounts.length);
     for (uint256 i; i < segmentAmounts.length; i++) {
       uint256 newPlanId = _segmentPlan(msg.sender, planId, segmentAmounts[i]);
@@ -120,7 +120,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     uint256 remainder,
     uint256 latestUnlock
   ) internal {
-    require(ownerOf(planId) == holder, '!holder');
+    require(ownerOf(planId) == holder, '!owner');
     Plan memory plan = plans[planId];
     if (remainder == 0) {
       delete plans[planId];
@@ -134,7 +134,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   }
 
   function _segmentPlan(address holder, uint256 planId, uint256 segmentAmount) internal returns (uint256 newPlanId) {
-    require(ownerOf(planId) == holder, '!holder');
+    require(ownerOf(planId) == holder, '!owner');
     Plan memory plan = plans[planId];
     require(segmentAmount < plan.amount, 'amount error');
     uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
@@ -174,8 +174,8 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   }
 
   function _combinePlans(address holder, uint256 planId0, uint256 planId1) internal returns (uint256 survivingPlan) {
-    require(ownerOf(planId0) == holder, '!holder');
-    require(ownerOf(planId1) == holder, '!holder');
+    require(ownerOf(planId0) == holder, '!owner');
+    require(ownerOf(planId1) == holder, '!owner');
     Plan memory plan0 = plans[planId0];
     Plan memory plan1 = plans[planId1];
     require(plan0.token == plan1.token, 'token error');
@@ -184,14 +184,11 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     require(plan0.period == plan1.period, 'period error');
     uint256 plan0End = TimelockLibrary.endDate(plan0.start, plan0.amount, plan0.rate, plan0.period);
     uint256 plan1End = TimelockLibrary.endDate(plan1.start, plan1.amount, plan1.rate, plan1.period);
-    // either they have the same end date, or if they dont then they should have the same original end date if they were segmented
     require(plan0End == plan1End || segmentOriginalEnd[planId0] == segmentOriginalEnd[planId1], 'end error');
-    // add em together and delete plan 1
     plans[planId0].amount += plans[planId1].amount;
     plans[planId0].rate += plans[planId1].rate;
     uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
     if (end < plan0End) {
-      console.log('end was lower, have to check original');
       require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
     }
     delete plans[planId1];

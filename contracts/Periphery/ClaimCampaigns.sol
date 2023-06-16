@@ -67,11 +67,11 @@ contract ClaimCampaigns is ReentrancyGuard {
   }
 
   function createCampaign(bytes16 id, Campaign memory campaign, ClaimLockup memory claimLockup, uint256 fee) external nonReentrant {
-    require(!usedIds[id], 'already used');
+    require(!usedIds[id], 'in use');
     usedIds[id] = true;
-    require(campaign.token != address(0));
-    require(campaign.manager != address(0));
-    require(campaign.amount > 0);
+    require(campaign.token != address(0), "0address");
+    require(campaign.manager != address(0), "0manager");
+    require(campaign.amount > 0, "0amount");
     require(campaign.end > block.timestamp);
     TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + fee);
     if (fee > 0) {
@@ -84,7 +84,7 @@ contract ClaimCampaigns is ReentrancyGuard {
       }
     }
     if (campaign.tokenLockup != TokenLockup.Unlocked) {
-      require(claimLockup.tokenLocker != address(0));
+      require(claimLockup.tokenLocker != address(0), "invalide locker");
       (, bool valid) = TimelockLibrary.validateEnd(
         claimLockup.start,
         claimLockup.cliff,
