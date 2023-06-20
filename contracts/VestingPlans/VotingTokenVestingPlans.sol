@@ -89,6 +89,14 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
     }
   }
 
+  function changeVestingPlanAdmin(uint256 planId, address newVestingAdmin) external {
+    Plan storage plan = plans[planId];
+    require(msg.sender == plan.vestingAdmin, '!vestingAdmin');
+    require(ownerOf(planId) != newVestingAdmin, '!planOwner');
+    plan.vestingAdmin = newVestingAdmin;
+    emit VestingPlanAdminChanged(planId, newVestingAdmin);
+  }
+
   /****CORE INTERNAL FUNCTIONS*********************************************************************************************************************************************/
 
   function _revokePlan(address vestingAdmin, uint256 planId) internal {
@@ -211,7 +219,8 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
 
   function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721) {
     require(plans[tokenId].adminTransferOBO, '!transferrable');
-    require(msg.sender == plans[tokenId].vestingAdmin, '!vesting Admin');
+    require(to !=plans[tokenId].vestingAdmin, '!transfer to admin');
+    require(msg.sender == plans[tokenId].vestingAdmin, '!vestingAdmin');
     _transfer(from, to, tokenId);
     emit PlanTransferredByVestingAdmin(tokenId, from, to);
   }

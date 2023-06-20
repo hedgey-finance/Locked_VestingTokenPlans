@@ -49,13 +49,6 @@ contract VestingStorage {
 
   event PlanTransferredByVestingAdmin(uint256 indexed id, address indexed from, address indexed to);
 
-  function changeVestingPlanAdmin(uint256 planId, address newVestingAdmin) external {
-    Plan storage plan = plans[planId];
-    require(msg.sender == plan.vestingAdmin, '!vestingAdmin');
-    plan.vestingAdmin = newVestingAdmin;
-    emit VestingPlanAdminChanged(planId, newVestingAdmin);
-  }
-
   function planBalanceOf(
     uint256 planId,
     uint256 timeStamp,
