@@ -306,6 +306,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
 
   function _setupVoting(address holder, uint256 planId) internal returns (address) {
     require(ownerOf(planId) == holder, '!owner');
+    require(votingVaults[planId] == address(0), "exists");
     Plan memory plan = plans[planId];
     VotingVault vault = new VotingVault(plan.token, holder);
     votingVaults[planId] = address(vault);
@@ -317,7 +318,9 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   function _delegate(address holder, uint256 planId, address delegatee) internal {
     require(ownerOf(planId) == holder, '!owner');
     address vault = votingVaults[planId];
-    require(votingVaults[planId] != address(0), 'no vault setup');
+    if (votingVaults[planId] == address(0)) {
+      vault = _setupVoting(holder, planId);
+    }
     VotingVault(vault).delegateTokens(delegatee);
   }
 

@@ -4,9 +4,14 @@ const happyPath = require('./tests/happyPath');
 const { segmentTests, segmentVotingVaultTests, segmentErrorTests } = require('./tests/segmentTests');
 const { claimTests, claimErrorTests } = require('./tests/claimTests');
 const { createTests, createErrorTests } = require('./tests/createTests');
-const { redeemTests, redeemSegmentCombineTests, redeemVotingVaultTests, redeemErrorTests } = require('./tests/redeemTests');
+const {
+  redeemTests,
+  redeemSegmentCombineTests,
+  redeemVotingVaultTests,
+  redeemErrorTests,
+} = require('./tests/redeemTests');
 const { revokeTests, revokeErrorTests } = require('./tests/revokeTests');
-
+const { votingVaultTests, votingVaultErrorTests } = require('./tests/votingVaultTests');
 
 // describe('Testing the URI Admin functions', () => {
 //   adminTests(true, false);
@@ -64,19 +69,18 @@ const { revokeTests, revokeErrorTests } = require('./tests/revokeTests');
 //   redeemErrorTests(true, true);
 // });
 
-describe('Testing the revoke functions', () => {
-  const paramsMatrix = [
-        { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
-        { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
-      ];
-      paramsMatrix.forEach((params) => {
-        revokeTests(true, params);
-        revokeTests(false, params);
-      });
-  revokeErrorTests(true);
-  revokeErrorTests(false);
-});
-
+// describe('Testing the revoke functions', () => {
+//   const paramsMatrix = [
+//     { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
+//     { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
+//   ];
+//   paramsMatrix.forEach((params) => {
+//     revokeTests(true, params);
+//     revokeTests(false, params);
+//   });
+//   revokeErrorTests(true);
+//   revokeErrorTests(false);
+// });
 
 // describe('Testing the Segmentation and Combination Methods', () => {
 //   const paramsMatrix = [
@@ -133,6 +137,19 @@ describe('Testing the revoke functions', () => {
 //     segmentVotingVaultTests(params);
 //   });
 // });
+
+describe('Testing the voting vault setup and functions', async () => {
+  const paramsMatrix = [
+    { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
+    // { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
+  ];
+  paramsMatrix.forEach((params) => {
+    votingVaultTests(true, params);
+    votingVaultTests(false, params);
+  });
+  // votingVaultErrorTests(true);
+  // votingVaultErrorTests(false);
+});
 
 // describe('Testing the Claim Campaign tests', () => {
 //   const paramsMatrix = [

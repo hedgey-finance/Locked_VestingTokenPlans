@@ -185,6 +185,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
 
   function _setupVoting(address holder, uint256 planId) internal returns (address) {
     require(ownerOf(planId) == holder, "!owner");
+    require(votingVaults[planId] == address(0), "exists");
     Plan memory plan = plans[planId];
     VotingVault vault = new VotingVault(plan.token, holder);
     votingVaults[planId] = address(vault);
