@@ -4,16 +4,6 @@ const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const C = require('../constants');
 const { BigNumber } = require('ethers');
 
-// redeem testing:
-// 1. check partial and full redemption balances at various times
-// 2. process those partial and full redemptions and confirm they match expectations
-// 3. test doing multiple partial redemptions (with on-chain voting vaults)
-// 4. test doing multiple full redemptions (with on-chain voting vaults)
-// 5. test doing multiple mixed partial and full redemptions (with on-chain voting vaults)
-// 6. test redemptions with multiple tokens (with on-chain voting vaults)
-// 7. tests redeeming segmented nfts (with on-chain voting vaults)
-// 8. tests redeeming combined nfts (with on-chain voting vaults)
-
 const redeemTests = (vesting, voting, params) => {
   let s, admin, a, b, c, d, hedgey, token, batcher;
   let amount, start, cliff, period, rate, end;
@@ -206,7 +196,37 @@ const redeemTests = (vesting, voting, params) => {
     expect(await token.balanceOf(b.address)).to.eq(partial.mul(5));
     expect(await token.balanceOf(b.address)).to.eq(periods.mul(rate).mul(5));
   });
-  //   it('redeems a single plan with multiple normal redemptions', async () => {});
+  it('redeems muliple partials, skipping one that had previously been redeemed', async () => {
+    // previous 5 have been redeemed at cliff - move forward to 3 periods and redeem number 3
+    now = await time.increase(period.mul(3));
+    let tx = await hedgey.connect(b).partialRedeemPlans(['3'], now);
+    const amountRedeemed = (await tx.wait()).events[1].args.amountRedeemed;
+    let bal = await token.balanceOf(b.address);
+    const plan3 = await hedgey.plans('3');
+    await hedgey.connect(b).partialRedeemPlans(['2', '3', '4', '5', '6'], now);
+    const _plan3 = await hedgey.plans('3');
+    expect(plan3.amount).to.eq(_plan3.amount);
+    expect(plan3.start).to.eq(_plan3.start);
+  });
+  it('redeems a single plan with multiple normal redemptions', async () => {
+    // each balance check assumes 1 second of time increase between calculating and processing block
+    let now = await time.latest();
+    start = BigNumber.from(now).add(params.start);
+    cliff = BigNumber.from(start).add(params.cliff);
+    vesting
+      ? await hedgey.createPlan(c.address, token.address, amount, start, cliff, rate, period, admin.address, true)
+      : await hedgey.createPlan(c.address, token.address, amount, start, cliff, rate, period);
+    // redeem pre cliff - nothing should redeem
+    await hedgey.connect(c).redeemPlans(['7']);
+    expect(await token.balanceOf(c.address)).to.eq(0);;
+    await time.increase(cliff.sub(now));
+    now = BigNumber.from(await time.latest())
+    let check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(1));
+    expect(await hedgey.connect(c).redeemPlans(['7']))
+      .to.emit('PlanRedeemed')
+      .withArgs('7', check.balance, check.remainder, check.latestUnlock);
+    expect(await token.balanceOf(c.address)).to.eq(check.balance);
+  });
   //   it('redeems multiple plans with multiple normal redemptions', async () => {});
   //   it('redeems one plan with the redeemAll redemption', async () => {});
   //   it('redeems multiple plans with the redeemAll redemption', async () => {});
