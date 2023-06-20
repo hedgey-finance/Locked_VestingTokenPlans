@@ -17,8 +17,8 @@ module.exports = async () => {
     const claimer = await ClaimCampaigns.deploy(admin.address, locked.address, C.MONTH, true);
     const Token = await ethers.getContractFactory('Token');
     const token = await Token.deploy(C.E18_1000000.mul(100000), 'Token', 'TK');
-    const USDC = await ethers.getContractFactory('Token');
-    const usdc = await USDC.deploy(C.E18_1000000.mul(100000), 'USDC', 'USDC');
+    const dai = await Token.deploy(C.E18_1000000.mul(100000), 'DAI', 'DAI');
+    const usdc = await Token.deploy(C.E18_1000000.mul(100000), 'USDC', 'USDC');
     return {
         admin,
         a,
@@ -31,6 +31,7 @@ module.exports = async () => {
         voteVest,
         batcher,
         token,
+        dai,
         usdc,
         claimer,
     }

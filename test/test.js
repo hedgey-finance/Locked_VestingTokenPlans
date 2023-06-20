@@ -4,7 +4,7 @@ const happyPath = require('./tests/happyPath');
 const { segmentTests, segmentVotingVaultTests, segmentErrorTests } = require('./tests/segmentTests');
 const { claimTests, claimErrorTests } = require('./tests/claimTests');
 const { createTests, createErrorTests } = require('./tests/createTests');
-const { redeemTests, redeemErrorTests } = require('./tests/redeemTests');
+const { redeemTests, redeemSegmentCombineTests, redeemVotingVaultTests, redeemErrorTests } = require('./tests/redeemTests');
 
 // describe('Testing the URI Admin functions', () => {
 //   adminTests(true, false);
@@ -44,18 +44,23 @@ const { redeemTests, redeemErrorTests } = require('./tests/redeemTests');
 //       createErrorTests(false, false);
 // })
 
-describe('Testing redeeming funtions', () => {
-  const paramsMatrix = [
-    { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
-    // { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
-  ];
-  paramsMatrix.forEach((params) => {
-    redeemTests(true, true, params);
-    // redeemTests(true, false, params);
-    // redeemTests(false, true, params);
-    // redeemTests(false, false, params);
-  });
-});
+// describe('Testing redeeming funtions', () => {
+//   const paramsMatrix = [
+//     { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
+//     { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
+//   ];
+//   paramsMatrix.forEach((params) => {
+//     redeemTests(true, true, params);
+//     redeemTests(true, false, params);
+//     redeemTests(false, true, params);
+//     redeemTests(false, false, params);
+//     redeemSegmentCombineTests(true, params);
+//     redeemSegmentCombineTests(false, params);
+//     redeemVotingVaultTests(true, params);
+//     redeemVotingVaultTests(false, params);
+//   });
+//   redeemErrorTests(true, true);
+// });
 
 // describe('Testing the Segmentation and Combination Methods', () => {
 //   const paramsMatrix = [
