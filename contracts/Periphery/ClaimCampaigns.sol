@@ -49,7 +49,7 @@ contract ClaimCampaigns is ReentrancyGuard {
   event CampaignStarted(bytes16 indexed id, Campaign campaign);
   event ClaimLockupCreated(bytes16 indexed id, ClaimLockup claimLockup);
   event CampaignCancelled(bytes16 indexed id);
-  event TokensClaimed(bytes16 indexed id, address indexed claimer, uint256 amount);
+  event TokensClaimed(bytes16 indexed id, address indexed claimer, uint256 amountClaimed, uint256 amountRemaining);
 
   constructor(address _feeCollector, address _feeLocker, uint256 _feeLockupTime, bool _feeLocked) {
     feeCollector = _feeCollector;
@@ -69,10 +69,10 @@ contract ClaimCampaigns is ReentrancyGuard {
   function createCampaign(bytes16 id, Campaign memory campaign, ClaimLockup memory claimLockup, uint256 fee) external nonReentrant {
     require(!usedIds[id], 'in use');
     usedIds[id] = true;
-    require(campaign.token != address(0), "0address");
-    require(campaign.manager != address(0), "0manager");
-    require(campaign.amount > 0, "0amount");
-    require(campaign.end > block.timestamp);
+    require(campaign.token != address(0), "0_address");
+    require(campaign.manager != address(0), "0_manager");
+    require(campaign.amount > 0, "0_amount");
+    require(campaign.end > block.timestamp, "end error");
     TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + fee);
     if (fee > 0) {
       if (feeLocked) {
@@ -111,7 +111,6 @@ contract ClaimCampaigns is ReentrancyGuard {
     campaigns[campaignId].amount -= claimAmount;
     if (campaigns[campaignId].amount == 0) {
       delete campaigns[campaignId];
-      delete claimLockups[campaignId];
     }
     if (campaign.tokenLockup == TokenLockup.Unlocked) {
       TransferHelper.withdrawTokens(campaign.token, msg.sender, claimAmount);
@@ -141,7 +140,7 @@ contract ClaimCampaigns is ReentrancyGuard {
         );
       }
     }
-    emit TokensClaimed(campaignId, msg.sender, claimAmount);
+    emit TokensClaimed(campaignId, msg.sender, claimAmount, campaigns[campaignId].amount);
   }
 
   function cancelCampaign(bytes16 campaignId) external nonReentrant {

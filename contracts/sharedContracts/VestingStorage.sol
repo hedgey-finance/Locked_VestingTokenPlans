@@ -41,9 +41,9 @@ contract VestingStorage {
 
   /// @notice event when the NFT is redeemed, there are two redemption types, partial and full redemption
   /// if the remainder == 0 then it is a full redemption and the NFT is burned, otherwise it is a partial redemption
-  event PlanTokensUnlocked(uint256 indexed id, uint256 unlockedAmount, uint256 planRemainder, uint256 resetDate);
+  event PlanRedeemed(uint256 indexed id, uint256 amountRedeemed, uint256 planRemainder, uint256 resetDate);
 
-  event PlanRevoked(uint256 indexed id, uint256 unlockedAmount, uint256 revokedAmount);
+  event PlanRevoked(uint256 indexed id, uint256 amountRedeemed, uint256 revokedAmount);
 
   event VestingPlanAdminChanged(uint256 indexed id, address _newVestingAdmin);
 

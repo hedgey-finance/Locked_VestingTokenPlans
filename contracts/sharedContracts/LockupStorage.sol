@@ -22,7 +22,7 @@ contract LockupStorage {
   /// @dev a mapping of the NFT tokenId from _tokenIds to the timelock structs to locate in storage
   mapping(uint256 => Plan) public plans;
 
-  mapping(uint256 => uint256) segmentOriginalEnd;
+  mapping(uint256 => uint256) public segmentOriginalEnd;
 
   ///@notice Events when a new timelock and NFT is minted this event spits out all of the struct information
   event PlanCreated(
@@ -39,7 +39,7 @@ contract LockupStorage {
 
   /// @notice event when the NFT is redeemed, there are two redemption types, partial and full redemption
   /// if the remainder == 0 then it is a full redemption and the NFT is burned, otherwise it is a partial redemption
-  event PlanTokensUnlocked(uint256 indexed id, uint256 amountClaimed, uint256 planRemainder, uint256 resetDate);
+  event PlanRedeemed(uint256 indexed id, uint256 amountRedeemed, uint256 planRemainder, uint256 resetDate);
 
   event PlanSegmented(
     uint256 indexed id,

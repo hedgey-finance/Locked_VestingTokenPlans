@@ -127,13 +127,20 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
       plans[planId].start = latestUnlock;
     }
     TransferHelper.withdrawTokens(plan.token, holder, balance);
-    emit PlanTokensUnlocked(planId, balance, remainder, latestUnlock);
+    emit PlanRedeemed(planId, balance, remainder, latestUnlock);
   }
 
-  /****VOTING FUNCTIONS*********************************************************************************************************************************************/
+  /****EXTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function delegate(uint256 planId, address delegatee) external {
       _delegateToken(delegatee, planId);
+  }
+
+  function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
+    require(planIds.length == delegatees.length, 'length error');
+    for (uint256 i; i < planIds.length; i++) {
+      _delegateToken(delegatees[i], planIds[i]);
+    }
   }
 
   function delegateAll(address delegatee) external {
@@ -143,6 +150,8 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
       _delegateToken(delegatee, planId);
     }
   }
+
+/****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
     uint256 holdersBalance = balanceOf(holder);
@@ -155,10 +164,10 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
     }
   }
 
-  function delegatedBalances(address delegate, address token) external view returns (uint256 delegatedBalance) {
-    uint256 delegateBalance = balanceOfDelegate(delegate);
+  function delegatedBalances(address delegatee, address token) external view returns (uint256 delegatedBalance) {
+    uint256 delegateBalance = balanceOfDelegate(delegatee);
     for (uint256 i; i < delegateBalance; i++) {
-      uint256 planId = tokenOfDelegateByIndex(delegate, i);
+      uint256 planId = tokenOfDelegateByIndex(delegatee, i);
       Plan memory plan = plans[planId];
       if (token == plan.token) {
         delegatedBalance += plan.amount;

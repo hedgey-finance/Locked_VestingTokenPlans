@@ -6,11 +6,11 @@ const bigMin = (a, b) => {
   else return b;
 };
 
-const randomBigNum = (base, max, min) => {
+const randomBigNum = (max, min) => {
   let num = Math.round(Math.random() * max);
   num = Math.max(num, min);
-  console.log(num);
-  return BigNumber.from(10).pow(base).mul(num);
+  num = BigNumber.from(10).pow(18).mul(num);
+  return num;
 };
 
 const getVal = (amount) => {
@@ -18,7 +18,10 @@ const getVal = (amount) => {
 };
 
 const planEnd = (start, amount, rate, period) => {
-  const end = BigNumber.from(amount).mod(rate) == 0 ? BigNumber.from(amount).div(rate).mul(period).add(start) : BigNumber.from(amount).div(rate).mul(period).add(start).add(period);
+  const end =
+    BigNumber.from(amount).mod(rate) == 0
+      ? BigNumber.from(amount).div(rate).mul(period).add(start)
+      : BigNumber.from(amount).div(rate).mul(period).add(start).add(period);
   return end;
 };
 
@@ -31,7 +34,7 @@ const balanceAtTime = (start, cliff, amount, rate, period, timestamp, redeemTime
   let balance = remainder;
   let latestUnlock = remainder;
   start = BigNumber.from(start);
-  cliff = BigNumber.from(cliff)
+  cliff = BigNumber.from(cliff);
   amount = BigNumber.from(amount);
   rate = BigNumber.from(rate);
   period = BigNumber.from(period);
@@ -41,17 +44,17 @@ const balanceAtTime = (start, cliff, amount, rate, period, timestamp, redeemTime
     remainder = amount;
     latestUnlock = start;
   } else {
-    const periodsElapsed = (redeemTime.sub(start)).div(period);
+    const periodsElapsed = redeemTime.sub(start).div(period);
     const calculatedBalance = periodsElapsed.mul(rate);
     balance = bigMin(calculatedBalance, amount);
     remainder = BigNumber.from(amount).sub(balance);
-    latestUnlock = start.add((periodsElapsed.mul(period)));
-    return {
-      balance,
-      remainder,
-      latestUnlock,
-    };
+    latestUnlock = start.add(periodsElapsed.mul(period));
   }
+  return {
+    balance,
+    remainder,
+    latestUnlock,
+  };
 };
 module.exports = {
   ZERO: BigNumber.from(0),

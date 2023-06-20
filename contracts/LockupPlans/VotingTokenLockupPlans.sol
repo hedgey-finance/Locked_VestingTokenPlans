@@ -11,6 +11,8 @@ import '../sharedContracts/VotingVault.sol';
 import '../sharedContracts/URIAdmin.sol';
 import '../sharedContracts/LockupStorage.sol';
 
+import 'hardhat/console.sol';
+
 contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGuard, URIAdmin {
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
@@ -141,13 +143,14 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     } else {
       VotingVault(vault).withdrawTokens(holder, balance);
     }
-    emit PlanTokensUnlocked(planId, balance, remainder, latestUnlock);
+    emit PlanRedeemed(planId, balance, remainder, latestUnlock);
   }
 
   function _segmentPlan(address holder, uint256 planId, uint256 segmentAmount) internal returns (uint256 newPlanId) {
     require(ownerOf(planId) == holder, '!owner');
     Plan memory plan = plans[planId];
     require(segmentAmount < plan.amount, 'amount error');
+    require(segmentAmount > 0, '0_segment');
     uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
     _planIds.increment();
     newPlanId = _planIds.current();
@@ -274,7 +277,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     }
   }
 
-  /****VOTING FUNCTIONS*********************************************************************************************************************************************/
+  /****EXTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function setupVoting(uint256 planId) external nonReentrant returns (address votingVault) {
     votingVault = _setupVoting(msg.sender, planId);
@@ -284,6 +287,13 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     _delegate(msg.sender, planId, delegatee);
   }
 
+  function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
+    require(planIds.length == delegatees.length, 'length error');
+    for (uint256 i; i < planIds.length; i++) {
+      _delegate(msg.sender, planIds[i], delegatees[i]);
+    }
+  } 
+
   function delegateAll(address delegatee) external nonReentrant {
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
@@ -291,6 +301,8 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
       _delegate(msg.sender, planId, delegatee);
     }
   }
+
+/****INTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/ 
 
   function _setupVoting(address holder, uint256 planId) internal returns (address) {
     require(ownerOf(planId) == holder, '!owner');
@@ -308,6 +320,8 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     require(votingVaults[planId] != address(0), 'no vault setup');
     VotingVault(vault).delegateTokens(delegatee);
   }
+
+  /****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
     uint256 holdersBalance = balanceOf(holder);

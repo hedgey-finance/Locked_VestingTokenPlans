@@ -24,8 +24,13 @@ contract BatchPlanner {
     uint256 period,
     uint8 mintType
   ) external {
+    require(totalAmount > 0, '0_totalAmount');
+    require(locker != address(0), '0_locker');
+    require(token != address(0), '0_token');
+    require(plans.length > 0, 'no plans');
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
     SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
+    uint256 amountCheck;
     for (uint16 i; i < plans.length; i++) {
       ILockupPlans(locker).createPlan(
         plans[i].recipient,
@@ -36,7 +41,9 @@ contract BatchPlanner {
         plans[i].rate,
         period
       );
+      amountCheck += plans[i].amount;
     }
+    require(amountCheck == totalAmount, 'totalAmount error');
     emit BatchCreated(mintType);
   }
 
@@ -50,8 +57,13 @@ contract BatchPlanner {
     bool adminTransferOBO,
     uint8 mintType
   ) external {
+    require(totalAmount > 0, '0_totalAmount');
+    require(locker != address(0), '0_locker');
+    require(token != address(0), '0_token');
+    require(plans.length > 0, 'no plans');
     TransferHelper.transferTokens(token, msg.sender, address(this), totalAmount);
     SafeERC20.safeIncreaseAllowance(IERC20(token), locker, totalAmount);
+    uint256 amountCheck;
     for (uint16 i; i < plans.length; i++) {
       IVestingPlans(locker).createPlan(
         plans[i].recipient,
@@ -64,7 +76,9 @@ contract BatchPlanner {
         vestingAdmin,
         adminTransferOBO
       );
+      amountCheck += plans[i].amount;
     }
+    require(amountCheck == totalAmount, 'totalAmount error');
     emit BatchCreated(mintType);
   }
 }

@@ -145,10 +145,10 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
     } else {
       VotingVault(vault).withdrawTokens(holder, balance);
     }
-    emit PlanTokensUnlocked(planId, balance, remainder, latestUnlock);
+    emit PlanRedeemed(planId, balance, remainder, latestUnlock);
   }
 
-  /****VOTING FUNCTIONS*********************************************************************************************************************************************/
+  /****EXTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function setupVoting(uint256 planId) external nonReentrant returns (address votingVault) {
     votingVault = _setupVoting(msg.sender, planId);
@@ -158,6 +158,13 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
     _delegate(msg.sender, planId, delegatee);
   }
 
+  function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
+    require(planIds.length == delegatees.length, 'length error');
+    for (uint256 i; i < planIds.length; i++) {
+      _delegate(msg.sender, planIds[i], delegatees[i]);
+    }
+  } 
+
   function delegateAll(address delegatee) external nonReentrant {
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
@@ -165,6 +172,8 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
       _delegate(msg.sender, planId, delegatee);
     }
   }
+
+/****INTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/ 
 
   function _setupVoting(address holder, uint256 planId) internal returns (address) {
     require(ownerOf(planId) == holder, "!owner");
@@ -184,6 +193,8 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
     }
     VotingVault(vault).delegateTokens(delegatee);
   }
+
+/****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
     uint256 holdersBalance = balanceOf(holder);

@@ -1,6 +1,6 @@
 require('@nomiclabs/hardhat-etherscan');
 require('@nomiclabs/hardhat-waffle');
-require('hardhat-gas-reporter');
+// require('hardhat-gas-reporter');
 require('solidity-coverage');
 require('hardhat-deploy');
 require("dotenv").config();
@@ -17,12 +17,12 @@ module.exports = {
       viaIR: true,
     },
   },
-  gasReporter: {
-    currency: 'USD',
-    coinmarketcap: process.env.COINMARKETCAP,
-    gasPriceApi: 'https://api.etherscan.io/api?module=proxy&action=eth_gasPrice',
-    gasPrice: 40,
-  },
+  // gasReporter: {
+  //   currency: 'USD',
+  //   coinmarketcap: process.env.COINMARKETCAP,
+  //   gasPriceApi: 'https://api.etherscan.io/api?module=proxy&action=eth_gasPrice',
+  //   gasPrice: 40,
+  // },
   // networks: {
   //   sepolia: {
   //     deploy: ['deploy'],

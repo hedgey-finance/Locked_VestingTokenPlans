@@ -130,13 +130,14 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
       plans[planId].start = latestUnlock;
     }
     TransferHelper.withdrawTokens(plan.token, holder, balance);
-    emit PlanTokensUnlocked(planId, balance, remainder, latestUnlock);
+    emit PlanRedeemed(planId, balance, remainder, latestUnlock);
   }
 
   function _segmentPlan(address holder, uint256 planId, uint256 segmentAmount) internal returns (uint256 newPlanId) {
     require(ownerOf(planId) == holder, '!owner');
     Plan memory plan = plans[planId];
     require(segmentAmount < plan.amount, 'amount error');
+    require(segmentAmount > 0, '0_segment');
     uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
     _planIds.increment();
     newPlanId = _planIds.current();
@@ -207,10 +208,17 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     );
   }
 
-  /****VOTING FUNCTIONS*********************************************************************************************************************************************/
+  /****EXTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function delegate(uint256 planId, address delegatee) external nonReentrant {
       _delegateToken(delegatee, planId);
+  }
+
+  function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
+    require(planIds.length == delegatees.length, 'length error');
+    for (uint256 i; i < planIds.length; i++) {
+      _delegateToken(delegatees[i], planIds[i]);
+    }
   }
 
   function delegateAll(address delegatee) external nonReentrant {
@@ -220,6 +228,8 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
       _delegateToken(delegatee, planId);
     }
   }
+
+/****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
     uint256 holdersBalance = balanceOf(holder);
@@ -232,10 +242,10 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     }
   }
 
-  function delegatedBalances(address delegate, address token) external view returns (uint256 delegatedBalance) {
-    uint256 delegateBalance = balanceOfDelegate(delegate);
+  function delegatedBalances(address delegatee, address token) external view returns (uint256 delegatedBalance) {
+    uint256 delegateBalance = balanceOfDelegate(delegatee);
     for (uint256 i; i < delegateBalance; i++) {
-      uint256 planId = tokenOfDelegateByIndex(delegate, i);
+      uint256 planId = tokenOfDelegateByIndex(delegatee, i);
       Plan memory plan = plans[planId];
       if (token == plan.token) {
         delegatedBalance += plan.amount;

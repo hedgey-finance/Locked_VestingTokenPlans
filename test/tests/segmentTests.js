@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { setup } = require('../fixtures');
+const setup = require('../fixtures');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const C = require('../constants');
 const { BigNumber } = require('ethers');
@@ -24,7 +24,7 @@ const segmentTests = (voting, params) => {
     c = s.c;
     d = s.d;
     token = s.token;
-    await token.approve(hedgey.address, C.E18_1000000);
+    await token.approve(hedgey.address, C.E18_1000000.mul(10000));
     let now = await time.latest();
     amount = params.amount;
     segmentAmount = params.segmentAmount;
@@ -34,11 +34,9 @@ const segmentTests = (voting, params) => {
     let dPlanAmt = planAmount.mul(C.E18_1);
     planRate = rate.mul(dPlanAmt.div(amount));
     planRate = planRate.div(C.E18_1);
-    // console.log(`test plan rate: ${planRate}`);
     segmentRate = rate.sub(planRate);
-    // console.log(`test segment rate: ${segmentRate}`);
     start = BigNumber.from(now).add(params.start);
-    cliff = BigNumber.from(now).add(params.cliff);
+    cliff = start.add(params.cliff);
     end = C.planEnd(start, amount, rate, period);
     await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
     // now holder A will segment it into two plans
@@ -52,8 +50,6 @@ const segmentTests = (voting, params) => {
     segmentEnd = await hedgey.planEnd('2');
     expect(calcPlanEnd).to.eq(planEnd);
     expect(calcSegEnd).to.eq(segmentEnd);
-    // expect(planEnd).to.be.greaterThanOrEqual(end);
-    // expect(segmentEnd).to.be.greaterThanOrEqual(end);
     const plan = await hedgey.plans('1');
     const segment = await hedgey.plans('2');
     expect(plan.token).to.eq(segment.token);
@@ -77,21 +73,110 @@ const segmentTests = (voting, params) => {
       .to.emit('PlansCombined')
       .withArgs('1', '2', '1', amount, rate, start, cliff, period, end);
     // check that the 
+    const plan = await hedgey.plans('1');
+    expect(plan.token).to.eq(token.address);
+    expect(plan.amount).to.eq(amount);
+    expect(plan.start).to.eq(start);
+    expect(plan.rate).to.eq(rate);
+    expect(plan.cliff).to.eq(cliff);
+    expect(plan.period).to.eq(period);
+    const _end = await hedgey.planEnd('1');
+    expect(_end).to.eq(end);
   });
   it('segments plan 1 with two segments', async () => {
     const secondSegment = params.secondSegment
     await hedgey.connect(a).segmentPlan('1', [segmentAmount, secondSegment]);
     
   });
-  it('recombines segment 3 and 4 together, and then combines the original plan 1 with the survivor', async () => {
-    const tx = await hedgey.connect(a).combinePlans('3', '4');
-    const data = (await tx.wait()).events[2].args;
-    const survivor = data.survivingId;
-    await hedgey.connect(a).combinePlans('1', survivor);
+  it('recombines two children segments together', async () => {
+    const plan3 = await hedgey.plans('3');
+    const plan4 = await hedgey.plans('4');
+    const combinedAmount = plan3.amount.add(plan4.amount);
+    const combinedRate = plan3.rate.add(plan4.rate);
+    let expectedEnd = C.planEnd(start, combinedAmount, combinedRate, period);
+    expect(await hedgey.connect(a).combinePlans('3', '4')).to.emit('PlansCombined').withArgs('3', '4', '3', combinedAmount, combinedRate, start, cliff, period, expectedEnd);
+    const combinedPlan = await hedgey.plans('3');
+    expect(combinedPlan.amount).to.eq(combinedAmount);
+    expect(combinedPlan.rate).to.eq(combinedRate);
+    expect(combinedPlan.start).to.eq(start);
+    expect(combinedPlan.cliff).to.eq(cliff);
+    expect(combinedPlan.period).to.eq(period);
+    expect(await hedgey.planEnd('3')).to.eq(expectedEnd);
+    expect(await hedgey.balanceOf(a.address)).to.eq(2);
+    expect(await token.balanceOf(hedgey.address)).to.eq(amount);
+  });
+  it('recombines a combined segment with the original parent', async () => {
+    await hedgey.connect(a).combinePlans('1', '3');
+    expect(await hedgey.balanceOf(a.address)).to.eq(1);
+    expect(await token.balanceOf(hedgey.address)).to.eq(amount);
+    const plan = await hedgey.plans('1');
+    expect(plan.amount).to.eq(amount);
+    expect(plan.rate).to.eq(rate);
+    expect(plan.start).to.eq(start);
+    expect(plan.cliff).to.eq(cliff);
+    expect(plan.period).to.eq(period);
+    expect(await hedgey.planEnd('1')).to.eq(end);
+    // everything is now recombined again
+  });
+  it('segments the plan into 5 equal chunk sizes, and combines 2 and 5 together', async () => {
+    let segmentSize = amount.div(5);
+    let segmentRate = rate.div(5);
+    // segments should be 4 to create a total of 5
+    await hedgey.connect(a).segmentPlan('1', [segmentSize, segmentSize, segmentSize, segmentSize]);
+    const plan2 = await hedgey.plans('5');
+    const plan5 = await hedgey.plans('8');
+    expect(plan2.amount).to.eq(segmentSize);
+    expect(plan5.amount).to.eq(segmentSize);
+    // console.log(await hedgey.planEnd('5'));
+    // console.log(await hedgey.planEnd('8'));
+    expect(await hedgey.segmentOriginalEnd('5')).to.eq(end);
+    expect(await hedgey.segmentOriginalEnd('8')).to.eq(end);
+    expect(await hedgey.segmentOriginalEnd('1')).to.eq(end);
+    expect(await hedgey.connect(a).combinePlans('5', '8')).to.emit('PlansCombined').withArgs('5', '8', '5', segmentSize.add(segmentSize), segmentRate, start, cliff, period, end);
+    expect((await hedgey.planEnd('5')).gte(end)).to.be.true;
+    // console.log(`new plan5 end: ${await hedgey.planEnd('5')}`);
+    // console.log(`end: ${end}`);
+  });
+  it('redeems two segements from the sam parent plan, and then combines them', async () => {
+    //redeeming plan 1 and plan 6
+    await time.increaseTo(cliff.add(period));
+    await hedgey.connect(a).redeemPlans(['1', '6']);
+    await hedgey.connect(a).combinePlans('1', '6');
+  });
+  it('partially redeems two segments from the same parent plan, and then combines them', async () => {
+    let now = await time.latest();
+    await time.increase(period.mul(2));
+    await hedgey.connect(a).partialRedeemPlans(['1', '7'], period.add(now));
+    await hedgey.connect(a).combinePlans('1', '7');
+  });
+  it('creates two new plans with the same data, and the combines them', async () => {
+    // create plans 9 and 10
+    await hedgey.createPlan(a.address, token.address, segmentAmount, start, cliff, rate, period);
+    await hedgey.createPlan(a.address, token.address, segmentAmount, start, cliff, rate, period);
+    await hedgey.connect(a).combinePlans('9', '10');
+  });
+  it('creates two new plans with same data, segments them, and then combines the two unrelated segments', async () => {
+    // create plans 11 and 12
+    await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    await hedgey.connect(a).segmentPlan('11', [segmentAmount]);
+    await hedgey.connect(a).segmentPlan('12', [segmentAmount]);
+    await hedgey.connect(a).combinePlans('11', '12');
+    await hedgey.connect(a).combinePlans('13', '14');
+  });
+  it('creates two new plans with similar data, but different amounts and rates, but same end dates and combines them', async () => {
+    // plans 15 and 16
+    let amtA = C.E18_1000.mul(3);
+    let amtB = C.E18_1000.mul(6);
+    let rateA = C.E18_10;
+    let rateB = C.E18_10.mul(2);
+    await hedgey.createPlan(a.address, token.address, amtA, start, cliff, rateA, period);
+    await hedgey.createPlan(a.address, token.address, amtB, start, cliff, rateB, period);
+    await hedgey.connect(a).combinePlans('15', '16');
   });
 };
 
-const segmentVotingTests = (params) => {
+const segmentVotingVaultTests = (params) => {
     let s, admin, a, b, c, d, hedgey, token;
     let amount, start, cliff, period, rate, end, planAmount, planRate, planEnd, segmentAmount, segmentRate, segmentEnd;
     let vaultAddress, segmentVault;
@@ -137,15 +222,50 @@ const segmentVotingTests = (params) => {
     expect(await token.balanceOf(vaultAddress)).to.eq(amount);
     expect(await token.balanceOf(segmentVault)).to.eq(0);
     expect(await token.delegates(vaultAddress)).to.eq(a.address);
-  })
+  });
+  it('segments and delegates a plan', async () => {
+
+  });
 }
 
 const segmentErrorTests = () => {
+  it('reverts if a user tries to segment a plan that does not exist', async () => {
 
+  });
+  it('reverst if a user tries to segment a plan they do not own', async () => {
+
+  });
+  it('reverts if a user tries to segment a plan with the segment amount larger than the plan amount', async () => {
+
+  });
+  it('reverts if a new segment is equal to 0', async () => {
+
+  });
+  it('reverts if the segment amount is too small and creates a rate of 0', async () => {
+
+  });
+  it('reverts when combining two plans with different starts', async () => {
+
+  });
+  it('reverts when combining two plans with different cliffs', async () => {
+
+  });
+  it('reverts when combining two plans with different periods', async () => {
+
+  });
+  it('reverts when combining two plans with different original or current end dates', async () => {
+
+  });
+  it('reverts when a user tries to combine plans they do not own', async () => {
+
+  });
+  it('reverts when a user combines plans that  would result in a shorter end date than the current or original end date', async () => {
+
+  });
 }
 
 module.exports = {
     segmentTests,
-    segmentVotingTests,
+    segmentVotingVaultTests,
     segmentErrorTests,
 };

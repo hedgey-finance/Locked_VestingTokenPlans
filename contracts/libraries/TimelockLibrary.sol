@@ -11,12 +11,12 @@ library TimelockLibrary {
   }
 
   function validateEnd(uint256 start, uint256 cliff, uint256 amount, uint256 rate, uint256 period) internal pure returns (uint256 end, bool valid) {
-    require(amount > 0, 'amount error');
-    require(rate > 0, 'rate error');
-    require(rate <= amount, 'rate-amount');
-    require(period > 0, 'period error');
+    require(amount > 0, '0_amount');
+    require(rate > 0, '0_rate');
+    require(rate <= amount, 'rate > amount');
+    require(period > 0, '0_period');
     end = (amount % rate == 0) ? (amount / rate) * period + start : ((amount / rate) * period) + period + start;
-    require(cliff <= end, 'SV12');
+    require(cliff <= end, 'cliff > end');
     valid = true;
   }
 
@@ -37,7 +37,6 @@ library TimelockLibrary {
       lockedBalance = amount;
       unlockTime = start;
     } else {
-      // should take into account rounding because there are no decimals allowed
       uint256 periodsElapsed = (redemptionTime - start) / period;
       uint256 calculatedBalance = periodsElapsed * rate;
       unlockedBalance = min(calculatedBalance, amount);

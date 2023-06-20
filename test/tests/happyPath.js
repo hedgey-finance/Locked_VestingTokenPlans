@@ -1,5 +1,5 @@
 const { expect } = require('chai');
-const { setup } = require('../fixtures');
+const setup = require('../fixtures');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const C = require('../constants');
 const { BigNumber } = require('ethers');
@@ -28,10 +28,6 @@ module.exports = (vesting, voting, params) => {
     start = BigNumber.from(now).add(params.start);
     cliff = BigNumber.from(now).add(params.cliff);
     end = C.planEnd(start, amount, rate, period);
-    // console.log(`start: ${start.div(C.DAY)}`);
-    // console.log(`period: ${period.div(C.DAY)}`);
-    // console.log(`cliff: ${cliff.div(C.DAY)}`);
-    // console.log(`end: ${end.div(C.DAY)}`);
     if (vesting) {
       expect(
         await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, false)
@@ -63,11 +59,6 @@ module.exports = (vesting, voting, params) => {
     const calculatedFull = C.balanceAtTime(start, cliff, amount, rate, period, now, now);
     const partial = await hedgey.planBalanceOf('1', now, partialTime);
     const full = await hedgey.planBalanceOf('1', now, now);
-    //console.log(`calculated partial latest unlock: ${calculatedPartial.latestUnlock.sub(start).div(C.DAY)}`);
-    //console.log(`on chain partial: ${partial.latestUnlock.sub(start).div(C.DAY)}`);
-    
-    //console.log(`calculated full: ${calculatedFull.latestUnlock.sub(start).div(C.DAY)}`);
-    //console.log(`on chain full: ${full.latestUnlock.sub(start).div(C.DAY)}`);
     expect(calculatedPartial.balance).to.eq(partial.balance);
     expect(calculatedFull.balance).to.eq(full.balance);
     expect(calculatedPartial.remainder).to.eq(partial.remainder);
