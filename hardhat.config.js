@@ -1,6 +1,6 @@
 require('@nomiclabs/hardhat-etherscan');
 require('@nomiclabs/hardhat-waffle');
-// require('hardhat-gas-reporter');
+require('hardhat-gas-reporter');
 require('solidity-coverage');
 require('hardhat-deploy');
 require("dotenv").config();

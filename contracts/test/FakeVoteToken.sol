@@ -7,7 +7,7 @@ import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol';
 contract FakeToken is ERC20Votes {
   uint8 private _decimals;
 
-  constructor(uint256 initialSupply, string memory name, string memory symbol) ERC20(name, symbol) {
+  constructor(uint256 initialSupply, string memory name, string memory symbol) ERC20Permit(name) ERC20(name, symbol) {
     _decimals = 18;
     _mint(msg.sender, initialSupply);
   }
