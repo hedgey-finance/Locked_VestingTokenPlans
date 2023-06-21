@@ -61,7 +61,7 @@ const claimTests = (lockupType, voting, params) => {
       period: params.period,
     };
     await token.approve(claimer.address, C.E18_1000000.mul(10000));
-    let tx = await claimer.createCampaign(id, campaign, lockup, C.ZERO);
+    let tx = (lockupType == 0) ? await claimer.createUnlockedCampaign(id, campaign, C.ZERO) : await claimer.createLockedCampaign(id, campaign, lockup, C.ZERO);
     expect(tx).to.emit('CaimpaignStarted').withArgs(id, campaign);
     if (lockupType > 0) {
       expect(tx).to.emit('ClaimLockupCreated').withArgs(id, lockup);
@@ -201,45 +201,54 @@ const claimErrorTests = () => {
       period: C.DAY,
     };
     await token.approve(claimer.address, C.E18_1000000.mul(10000));
-    await claimer.createCampaign(id, campaign, lockup, C.ZERO);
-    await expect(claimer.createCampaign(id, campaign, lockup, C.ZERO)).to.be.revertedWith('in use');
+    await claimer.createLockedCampaign(id, campaign, lockup, C.ZERO);
+    await expect(claimer.createLockedCampaign(id, campaign, lockup, C.ZERO)).to.be.revertedWith('in use');
+    await expect(claimer.createUnlockedCampaign(id, campaign, C.ZERO)).to.be.revertedWith('in use');
   });
   it('create will revert if the token address is 0', async () => {
     campaign.token = C.ZERO_ADDRESS;
     const uuid = uuidv4();
     altId = uuidParse(uuid);
-    await expect(claimer.createCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('0_address');
+    await expect(claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('0_address');
   });
   it('create will revert if the manager is 0 address', async () => {
     campaign.token = token.address;
     campaign.manager = C.ZERO_ADDRESS;
-    await expect(claimer.createCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('0_manager');
+    await expect(claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('0_manager');
   });
   it('create will revert of the amount is 0', async () => {
     campaign.manager = admin.address;
     campaign.amount = C.ZERO;
-    await expect(claimer.createCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('0_amount');
+    await expect(claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('0_amount');
   });
   it('create will revert of the end date is in the past', async () => {
     campaign.amount = C.E18_1000;
     let now = await time.latest();
     campaign.end = now - 1;
-    await expect(claimer.createCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('end error');
+    await expect(claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('end error');
   });
   it('create will revert for lockups if the end is invalid', async () => {
     let now = await time.latest();
     campaign.end = C.WEEK.add(now);
     lockup.tokenLocker = C.ZERO_ADDRESS;
-    await expect(claimer.createCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('invalide locker');
+    await expect(claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('invalide locker');
     lockup.tokenLocker = hedgey.address;
     lockup.rate = C.ZERO;
-    await expect(claimer.createCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('0_rate');
+    await expect(claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('0_rate');
     lockup.rate = C.E18_05;
     lockup.cliff = C.WEEK.mul(1000000).add(now);
-    await expect(claimer.createCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('cliff > end');
+    await expect(claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('cliff > end');
     lockup.cliff = now;
     lockup.period = C.ZERO;
-    await expect(claimer.createCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('0_period');
+    await expect(claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('0_period');
+  });
+  ('it create locked will revert if the campaign has the unlocked enum', async () => {
+    campaign.tokenLockup = '0';
+    await expect(claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO)).to.be.revertedWith('!locked');
+  });
+  it('create unlocked will revert if the campaign has the locked enum', async () => {
+    campaign.tokenLockup = '1';
+    await expect(claimer.createUnlockedCampaign(altId, campaign, C.ZERO)).to.be.revertedWith('locked');
   });
   it('claim will revert if the proof is invalid', async () => {
     let proof = getProof('./test/trees/tree.json', b.address);
@@ -286,7 +295,7 @@ const claimErrorTests = () => {
     campaign.end = C.DAY.add(now);
     let uuid = uuidv4();
     altId = uuidParse(uuid);
-    await claimer.createCampaign(altId, campaign, lockup, C.ZERO);
+    await claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO);
     await claimer.cancelCampaign(altId);
     let proof = getProof('./test/trees/tree.json', b.address);
     await expect(claimer.connect(b).claimTokens(altId, proof, C.E18_1000)).to.be.revertedWith('campaign ended');
@@ -301,7 +310,7 @@ const claimErrorTests = () => {
     campaign.amount = C.E18_100.mul(2);
     let uuid = uuidv4();
     altId = uuidParse(uuid);
-    await claimer.createCampaign(altId, campaign, lockup, C.ZERO);
+    await claimer.createLockedCampaign(altId, campaign, lockup, C.ZERO);
     let proofA = getProof('./test/trees/tree.json', a.address);
     let proofB = getProof('./test/trees/tree.json', b.address);
     await claimer.connect(a).claimTokens(altId, proofA, C.E18_100);

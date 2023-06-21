@@ -50,24 +50,21 @@ contract ClaimCampaigns is ReentrancyGuard {
   event CampaignCancelled(bytes16 indexed id);
   event TokensClaimed(bytes16 indexed id, address indexed claimer, uint256 amountClaimed, uint256 amountRemaining);
 
-  constructor(address _feeCollector, address _feeLocker, uint256 _feeLockupTime, bool _feeLocked) {
+  constructor(address _feeCollector, address _feeLocker, uint256 _feeLockupTime) {
     feeCollector = _feeCollector;
     feeLocker = _feeLocker;
     feeLockupTime = _feeLockupTime;
-    feeLocked = _feeLocked;
   }
 
   function feeCollectionUpdates(
     address _feeCollector,
     address _feeLocker,
-    uint256 _feeLockupTime,
-    bool _feeLocked
+    uint256 _feeLockupTime
   ) external {
     require(msg.sender == feeCollector);
     feeCollector = _feeCollector;
     feeLocker = _feeLocker;
     feeLockupTime = _feeLockupTime;
-    feeLocked = _feeLocked;
   }
 
   function createUnlockedCampaign(bytes16 id, Campaign memory campaign, uint256 fee) external nonReentrant {
@@ -80,7 +77,7 @@ contract ClaimCampaigns is ReentrancyGuard {
     require(campaign.tokenLockup == TokenLockup.Unlocked, 'locked');
     TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + fee);
     if (fee > 0) {
-      if (feeLocked) {
+      if (feeLockupTime > 0) {
         SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), feeLocker, fee);
         uint256 rate = fee / feeLockupTime;
         ILockupPlans(feeLocker).createPlan(feeCollector, campaign.token, fee, block.timestamp, 0, rate, 1);
@@ -104,7 +101,7 @@ contract ClaimCampaigns is ReentrancyGuard {
     require(campaign.manager != address(0), '0_manager');
     require(campaign.amount > 0, '0_amount');
     require(campaign.end > block.timestamp, 'end error');
-    require(campaign.tokenLockup != TokenLockup.Unlocked, 'not locked');
+    require(campaign.tokenLockup != TokenLockup.Unlocked, '!locked');
     require(claimLockup.tokenLocker != address(0), 'invalide locker');
     TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + fee);
     if (fee > 0) {

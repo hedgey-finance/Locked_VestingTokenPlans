@@ -138,31 +138,31 @@ const { votingVaultTests, votingVaultErrorTests } = require('./tests/votingVault
 //   });
 // });
 
-describe('Testing the voting vault setup and functions', async () => {
-  const paramsMatrix = [
-    { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
+// describe('Testing the voting vault setup and functions', async () => {
+//   const paramsMatrix = [
+//     { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
     // { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
-  ];
+  // ];
   // paramsMatrix.forEach((params) => {
   //   votingVaultTests(true, params);
   //   votingVaultTests(false, params);
   // });
-  votingVaultErrorTests(true);
-  votingVaultErrorTests(false);
-});
-
-// describe('Testing the Claim Campaign tests', () => {
-//   const paramsMatrix = [
-//     {totalRecipients: 100, nodeA: 5, nodeB: 33, rate: C.E18_05, start: C.ZERO, period: C.DAY, cliff: C.DAY },
-//     {totalRecipients: 10, nodeA: 5, nodeB: 12, rate: C.E18_05, start: C.ZERO, period: C.DAY, cliff: C.DAY },
-//   ]
-//   paramsMatrix.forEach((params) => {
-//     claimTests(0, false, params);
-//     claimTests(1, true, params);
-//     claimTests(1, false, params);
-//     claimTests(2, true, params);
-//     claimTests(2, false, params);
-//   });
-//   claimErrorTests();
-
+  // votingVaultErrorTests(true);
+  // votingVaultErrorTests(false);
 // });
+
+describe('Testing the Claim Campaign tests', () => {
+  const paramsMatrix = [
+    {totalRecipients: 100, nodeA: 5, nodeB: 33, rate: C.E18_05, start: C.ZERO, period: C.DAY, cliff: C.DAY },
+    {totalRecipients: 10, nodeA: 5, nodeB: 12, rate: C.E18_05, start: C.ZERO, period: C.DAY, cliff: C.DAY },
+  ]
+  paramsMatrix.forEach((params) => {
+    claimTests(0, false, params);
+    claimTests(1, true, params);
+    claimTests(1, false, params);
+    claimTests(2, true, params);
+    claimTests(2, false, params);
+  });
+  claimErrorTests();
+
+});
