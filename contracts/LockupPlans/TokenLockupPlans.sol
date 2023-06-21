@@ -64,7 +64,10 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     _redeemPlans(planIds, block.timestamp);
   }
 
-  function segmentPlan(uint256 planId, uint256[] memory segmentAmounts) external nonReentrant returns (uint256[] memory newPlanIds) {
+  function segmentPlan(
+    uint256 planId,
+    uint256[] memory segmentAmounts
+  ) external nonReentrant returns (uint256[] memory newPlanIds) {
     newPlanIds = new uint256[](segmentAmounts.length);
     for (uint256 i; i < segmentAmounts.length; i++) {
       uint256 newPlanId = _segmentPlan(msg.sender, planId, segmentAmounts[i]);
@@ -147,8 +150,20 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     uint256 planRate = (plan.rate * ((planAmount * (10 ** 18)) / plan.amount)) / (10 ** 18);
     plans[planId].rate = planRate;
     uint256 segmentRate = plan.rate - planRate;
-    (uint256 planEnd, bool validPlan) = TimelockLibrary.validateEnd(plan.start, plan.cliff, planAmount, planRate, plan.period);
-    (uint256 segmentEnd, bool validSegment) = TimelockLibrary.validateEnd(plan.start, plan.cliff, segmentAmount, segmentRate, plan.period);
+    (uint256 planEnd, bool validPlan) = TimelockLibrary.validateEnd(
+      plan.start,
+      plan.cliff,
+      planAmount,
+      planRate,
+      plan.period
+    );
+    (uint256 segmentEnd, bool validSegment) = TimelockLibrary.validateEnd(
+      plan.start,
+      plan.cliff,
+      segmentAmount,
+      segmentRate,
+      plan.period
+    );
     require(validPlan && validSegment, 'invalid new plans');
     uint256 endCheck = segmentOriginalEnd[planId] == 0 ? end : segmentOriginalEnd[planId];
     require(planEnd >= endCheck, 'plan end error');
@@ -211,7 +226,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   /****EXTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function delegate(uint256 planId, address delegatee) external nonReentrant {
-      _delegateToken(delegatee, planId);
+    _delegateToken(delegatee, planId);
   }
 
   function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
@@ -221,15 +236,15 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     }
   }
 
-  function delegateAll(address delegatee) external nonReentrant {
+  function delegateAll(address token, address delegatee) external nonReentrant {
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
       uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
-      _delegateToken(delegatee, planId);
+      if (plans[planId].token == token) _delegateToken(delegatee, planId);
     }
   }
 
-/****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
+  /****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
     uint256 holdersBalance = balanceOf(holder);

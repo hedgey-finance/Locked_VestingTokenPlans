@@ -141,7 +141,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /****EXTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function delegate(uint256 planId, address delegatee) external {
-      _delegateToken(delegatee, planId);
+    _delegateToken(delegatee, planId);
   }
 
   function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
@@ -151,15 +151,15 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
     }
   }
 
-  function delegateAll(address delegatee) external {
+  function delegateAll(address token, address delegatee) external {
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
       uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
-      _delegateToken(delegatee, planId);
+      if (plans[planId].token == token) _delegateToken(delegatee, planId);
     }
   }
 
-/****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
+  /****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
     uint256 holdersBalance = balanceOf(holder);
@@ -187,7 +187,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
 
   function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721) {
     require(plans[tokenId].adminTransferOBO, '!transferrable');
-    require(to !=plans[tokenId].vestingAdmin, '!transfer to admin');
+    require(to != plans[tokenId].vestingAdmin, '!transfer to admin');
     require(msg.sender == plans[tokenId].vestingAdmin, '!vestingAdmin');
     _transfer(from, to, tokenId);
     emit PlanTransferredByVestingAdmin(tokenId, from, to);

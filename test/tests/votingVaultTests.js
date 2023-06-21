@@ -3,6 +3,7 @@ const setup = require('../fixtures');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const C = require('../constants');
 const { BigNumber } = require('ethers');
+const { ethers } = require('hardhat');
 
 const votingVaultTests = (vesting, params) => {
   let s, admin, a, b, c, d, hedgey, token, dai, usdc;
@@ -103,7 +104,7 @@ const votingVaultTests = (vesting, params) => {
         ? await hedgey.createPlan(c.address, usdc.address, amount, start, cliff, rate, period, admin.address, true)
         : await hedgey.createPlan(c.address, usdc.address, amount, start, cliff, rate, period);
     }
-    await hedgey.connect(c).delegateAll(d.address);
+    await hedgey.connect(c).delegateAll(usdc.address, d.address);
     expect(await usdc.delegates(await hedgey.votingVaults('9'))).to.eq(d.address);
     expect(await usdc.delegates(await hedgey.votingVaults('10'))).to.eq(d.address);
     expect(await usdc.delegates(await hedgey.votingVaults('11'))).to.eq(d.address);
@@ -226,11 +227,69 @@ const votingVaultTests = (vesting, params) => {
 const votingVaultErrorTests = (vesting) => {
   let s, admin, a, b, c, d, hedgey, token, dai, usdc;
   let amount, start, cliff, period, rate, end;
-  it('reverts if the function caller is not the owner of the plan', async () => {});
-  it('reverts if the plan holder already has a voting vault setup', async () => {});
-  it('reverts if the token isnt a governance token', async () => {});
-  it('reverts if the token calls a function with the delegate funtion to physically transfer tokens', async () => {});
-  it('reverts if delegating multiple plans the plan array lenght is different than the delegates array', async () => {});
+  it('reverts if the function caller is not the owner of the plan', async () => {
+    s = await setup();
+    hedgey = vesting ? s.voteVest : s.voteLocked;
+    admin = s.admin;
+    a = s.a;
+    b = s.b;
+    c = s.c;
+    d = s.d;
+    token = s.token;
+    dai = s.dai;
+    usdc = s.usdc;
+    await token.approve(hedgey.address, C.E18_1000000);
+    await dai.approve(hedgey.address, C.E18_1000000);
+    await usdc.approve(hedgey.address, C.E18_1000000);
+    let now = BigNumber.from(await time.latest());
+    amount = C.E18_1000;
+    period = C.DAY;
+    rate = C.E18_1;
+    start = now;
+    cliff = start.add(C.DAY);
+    end = C.planEnd(start, amount, rate, period);
+    vesting
+      ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)
+      : await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    await expect(hedgey.connect(b).setupVoting('1')).to.be.revertedWith('!owner');
+    await expect(hedgey.connect(b).delegate('1', b.address)).to.be.revertedWith('!owner');
+    await expect(hedgey.connect(b).delegatePlans(['1'], [b.address])).to.be.revertedWith('!owner');
+  });
+  it('reverts if the plan holder already has a voting vault setup', async () => {
+    await hedgey.connect(a).setupVoting('1');
+    await expect(hedgey.connect(a).setupVoting('1')).to.be.revertedWith('exists');
+  });
+  it('reverts if the token isnt a governance token', async () => {
+    let NonVote = await ethers.getContractFactory('NonVotingToken');
+    let nonVote = await NonVote.deploy(C.E18_1000000, 'NV', 'NV');
+    await nonVote.approve(hedgey.address, C.E18_1000000);
+    vesting
+      ? await hedgey.createPlan(a.address, nonVote.address, amount, start, cliff, rate, period, admin.address, true)
+      : await hedgey.createPlan(a.address, nonVote.address, amount, start, cliff, rate, period);
+    await expect(hedgey.connect(a).setupVoting('2')).to.be.reverted;
+  });
+  it('reverts if the token calls a function with the delegate funtion to physically transfer tokens', async () => {
+    let FakeToken = await ethers.getContractFactory('FakeToken');
+    let fakeToken = await FakeToken.deploy(C.E18_10000, 'FT', 'FT');
+    await fakeToken.approve(hedgey.address, C.E18_1000000);
+    vesting
+      ? await hedgey.createPlan(a.address, fakeToken.address, amount, start, cliff, rate, period, admin.address, true)
+      : await hedgey.createPlan(a.address, fakeToken.address, amount, start, cliff, rate, period);
+    await expect(hedgey.connect(a).delegate('3', c.address)).to.be.revertedWith('balance error');
+    await expect(hedgey.connect(a).delegatePlans(['3'], [c.address])).to.be.revertedWith('balance error');
+    await expect(hedgey.connect(a).delegateAll(fakeToken.address, c.address)).to.be.revertedWith('balance error');
+    let tx = await hedgey.connect(a).setupVoting('3');
+    let vv = await hedgey.votingVaults('3');
+    expect(vv).to.not.eq(C.ZERO_ADDRESS);
+    expect(await fakeToken.balanceOf(vv)).to.eq(amount);
+    await expect(hedgey.connect(a).delegate('3', c.address)).to.be.revertedWith('balance error');
+  });
+  it('reverts if delegating multiple plans the plan array lenght is different than the delegates array', async () => {
+    vesting
+      ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)
+      : await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    await expect(hedgey.connect(a).delegatePlans(['4'], [a.address, b.address])).to.be.revertedWith('array error')
+  });
 };
 
 module.exports = {

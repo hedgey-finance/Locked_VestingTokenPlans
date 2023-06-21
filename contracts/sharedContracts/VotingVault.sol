@@ -30,7 +30,7 @@ contract VotingVault {
         uint256 balanceCheck = IERC20(token).balanceOf(address(this));
         IGovernanceToken(token).delegate(delegatee);
         // check to make sure delegate function is not malicious
-        require(balanceCheck == IERC20(token).balanceOf(address(this)));
+        require(balanceCheck == IERC20(token).balanceOf(address(this)), 'balance error');
     }
 
     function withdrawTokens(address to, uint256 amount) external onlyController {

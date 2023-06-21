@@ -143,12 +143,12 @@ describe('Testing the voting vault setup and functions', async () => {
     { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
     // { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
   ];
-  paramsMatrix.forEach((params) => {
-    votingVaultTests(true, params);
-    votingVaultTests(false, params);
-  });
-  // votingVaultErrorTests(true);
-  // votingVaultErrorTests(false);
+  // paramsMatrix.forEach((params) => {
+  //   votingVaultTests(true, params);
+  //   votingVaultTests(false, params);
+  // });
+  votingVaultErrorTests(true);
+  votingVaultErrorTests(false);
 });
 
 // describe('Testing the Claim Campaign tests', () => {

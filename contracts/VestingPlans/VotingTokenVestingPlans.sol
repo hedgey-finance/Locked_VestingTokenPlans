@@ -167,25 +167,25 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   }
 
   function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
-    require(planIds.length == delegatees.length, 'length error');
+    require(planIds.length == delegatees.length, 'array error');
     for (uint256 i; i < planIds.length; i++) {
       _delegate(msg.sender, planIds[i], delegatees[i]);
     }
-  } 
+  }
 
-  function delegateAll(address delegatee) external nonReentrant {
+  function delegateAll(address token, address delegatee) external nonReentrant {
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
       uint256 planId = tokenOfOwnerByIndex(msg.sender, i);
-      _delegate(msg.sender, planId, delegatee);
+      if (plans[planId].token == token) _delegate(msg.sender, planId, delegatee);
     }
   }
 
-/****INTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/ 
+  /****INTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function _setupVoting(address holder, uint256 planId) internal returns (address) {
-    require(ownerOf(planId) == holder, "!owner");
-    require(votingVaults[planId] == address(0), "exists");
+    require(ownerOf(planId) == holder, '!owner');
+    require(votingVaults[planId] == address(0), 'exists');
     Plan memory plan = plans[planId];
     VotingVault vault = new VotingVault(plan.token, holder);
     votingVaults[planId] = address(vault);
@@ -195,7 +195,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   }
 
   function _delegate(address holder, uint256 planId, address delegatee) internal {
-    require(ownerOf(planId) == holder, "!owner");
+    require(ownerOf(planId) == holder, '!owner');
     address vault = votingVaults[planId];
     if (votingVaults[planId] == address(0)) {
       vault = _setupVoting(holder, planId);
@@ -203,7 +203,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
     VotingVault(vault).delegateTokens(delegatee);
   }
 
-/****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
+  /****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
     uint256 holdersBalance = balanceOf(holder);
@@ -220,7 +220,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
 
   function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721) {
     require(plans[tokenId].adminTransferOBO, '!transferrable');
-    require(to !=plans[tokenId].vestingAdmin, '!transfer to admin');
+    require(to != plans[tokenId].vestingAdmin, '!transfer to admin');
     require(msg.sender == plans[tokenId].vestingAdmin, '!vestingAdmin');
     _transfer(from, to, tokenId);
     emit PlanTransferredByVestingAdmin(tokenId, from, to);
