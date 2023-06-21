@@ -138,7 +138,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
     uint256 latestUnlock
   ) internal {
     require(ownerOf(planId) == holder, '!owner');
-    Plan memory plan = plans[planId];
+    address token = plans[planId].token;
     address vault = votingVaults[planId];
     if (remainder == 0) {
       delete plans[planId];
@@ -149,7 +149,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
       plans[planId].start = latestUnlock;
     }
     if (vault == address(0)) {
-      TransferHelper.withdrawTokens(plan.token, holder, balance);
+      TransferHelper.withdrawTokens(token, holder, balance);
     } else {
       VotingVault(vault).withdrawTokens(holder, balance);
     }

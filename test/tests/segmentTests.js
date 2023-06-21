@@ -223,41 +223,73 @@ const segmentVotingVaultTests = (params) => {
     expect(await token.balanceOf(segmentVault)).to.eq(0);
     expect(await token.delegates(vaultAddress)).to.eq(a.address);
   });
-  it('segments and delegates a plan', async () => {
-
-  });
 }
 
-const segmentErrorTests = () => {
+const segmentErrorTests = (voting) => {
+  let s, admin, a, b, c, d, hedgey, token, dai;
+  let amount, start, cliff, period, rate, segmentAmount;
   it('reverts if a user tries to segment a plan that does not exist', async () => {
-
+    s = await setup();
+    hedgey = voting ? s.voteLocked : s.locked;
+    admin = s.admin;
+    a = s.a;
+    b = s.b;
+    c = s.c;
+    d = s.d;
+    token = s.token;
+    dai = s.dai;
+    await token.approve(hedgey.address, C.E18_1000000.mul(10000));
+    await dai.approve(hedgey.address, C.E18_1000000);
+    let now = BigNumber.from(await time.latest());
+    start = now;
+    cliff = now;
+    period = C.DAY;
+    amount = C.E18_10000
+    segmentAmount = amount.div(2);
+    rate = C.E18_1;
+    await (expect(hedgey.segmentPlan('1', [segmentAmount]))).to.be.reverted;
+    
   });
   it('reverst if a user tries to segment a plan they do not own', async () => {
-
+    await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    await (expect(hedgey.segmentPlan('1', [segmentAmount]))).to.be.revertedWith('!owner');
   });
   it('reverts if a user tries to segment a plan with the segment amount larger than the plan amount', async () => {
-
+    await (expect(hedgey.connect(a).segmentPlan('1', [amount]))).to.be.revertedWith('amount error');
+    await (expect(hedgey.connect(a).segmentPlan('1', [amount.add(1)]))).to.be.revertedWith('amount error');
   });
   it('reverts if a new segment is equal to 0', async () => {
-
+    await (expect(hedgey.connect(a).segmentPlan('1', [C.ZERO]))).to.be.revertedWith('0_segment');
   });
   it('reverts if the segment amount is too small and creates a rate of 0', async () => {
-
+    await (expect(hedgey.connect(a).segmentPlan('1', [C.ONE]))).to.be.revertedWith('segmentEnd error');
+    await (expect(hedgey.connect(a).segmentPlan('1', ['100']))).to.be.revertedWith('segmentEnd error');
+    
   });
+  it('reverts when combining plans with different tokens', async () => {
+    await hedgey.createPlan(a.address, dai.address, amount, start, cliff, rate, period);
+    await expect(hedgey.connect(a).combinePlans('1', '2')).to.be.revertedWith('token error');
+  })
   it('reverts when combining two plans with different starts', async () => {
-
+    await hedgey.createPlan(a.address, token.address, amount, start.add(C.DAY), cliff, rate, period);
+    await expect(hedgey.connect(a).combinePlans('1', '3')).to.be.revertedWith('start error');
   });
   it('reverts when combining two plans with different cliffs', async () => {
-
+    await hedgey.createPlan(a.address, token.address, amount, start, cliff.add(C.DAY), rate, period);
+    await expect(hedgey.connect(a).combinePlans('1', '4')).to.be.revertedWith('cliff error');
   });
   it('reverts when combining two plans with different periods', async () => {
-
+    await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, C.MONTH);
+    await expect(hedgey.connect(a).combinePlans('1', '5')).to.be.revertedWith('period error');
   });
   it('reverts when combining two plans with different original or current end dates', async () => {
-
+    await hedgey.createPlan(a.address, token.address, amount.add(C.E18_10), start, cliff, rate, period);
+    await expect(hedgey.connect(a).combinePlans('1', '6')).to.be.revertedWith('end error');
   });
   it('reverts when a user tries to combine plans they do not own', async () => {
-
+    await hedgey.createPlan(b.address, token.address, amount, start, cliff, rate, period);
+    await expect(hedgey.connect(b).combinePlans('1', '7')).to.be.revertedWith('!owner');
+    await expect(hedgey.connect(a).combinePlans('1', '7')).to.be.revertedWith('!owner');
   });
   it('reverts when a user combines plans that  would result in a shorter end date than the current or original end date', async () => {
 

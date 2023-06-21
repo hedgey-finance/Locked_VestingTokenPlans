@@ -126,7 +126,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
     uint256 latestUnlock
   ) internal {
     require(ownerOf(planId) == holder, '!owner');
-    Plan memory plan = plans[planId];
+    address token = plans[planId].token;
     if (remainder == 0) {
       delete plans[planId];
       _burn(planId);
@@ -134,7 +134,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
       plans[planId].amount = remainder;
       plans[planId].start = latestUnlock;
     }
-    TransferHelper.withdrawTokens(plan.token, holder, balance);
+    TransferHelper.withdrawTokens(token, holder, balance);
     emit PlanRedeemed(planId, balance, remainder, latestUnlock);
   }
 
@@ -145,7 +145,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   }
 
   function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
-    require(planIds.length == delegatees.length, 'length error');
+    require(planIds.length == delegatees.length, 'array error');
     for (uint256 i; i < planIds.length; i++) {
       _delegateToken(delegatees[i], planIds[i]);
     }

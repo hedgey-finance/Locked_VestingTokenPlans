@@ -37,6 +37,7 @@ const votingVaultTests = (vesting, params) => {
     expect(await hedgey.votingVaults('1')).to.eq(votingVault);
     expect(await token.balanceOf(votingVault)).to.eq(amount);
     expect(await token.delegates(votingVault)).to.eq(a.address);
+    expect(await hedgey.lockedBalances(a.address, token.address)).to.eq(amount);
   });
   it('delegates the tokens in a plan to another wallet', async () => {
     const votingVault = await hedgey.votingVaults('1');

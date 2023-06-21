@@ -101,6 +101,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   }
 
   function redeemAndTransfer(uint256 planId, address to) external virtual nonReentrant {
+    require(ownerOf(planId) == msg.sender, '!owner');
     (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(
       planId,
       block.timestamp,
@@ -131,7 +132,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     uint256 latestUnlock
   ) internal {
     require(ownerOf(planId) == holder, '!owner');
-    Plan memory plan = plans[planId];
+    address token = plans[planId].token;
     address vault = votingVaults[planId];
     if (remainder == 0) {
       delete plans[planId];
@@ -142,7 +143,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
       plans[planId].start = latestUnlock;
     }
     if (vault == address(0)) {
-      TransferHelper.withdrawTokens(plan.token, holder, balance);
+      TransferHelper.withdrawTokens(token, holder, balance);
     } else {
       VotingVault(vault).withdrawTokens(holder, balance);
     }
@@ -218,7 +219,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     uint256 plan0End = TimelockLibrary.endDate(plan0.start, plan0.amount, plan0.rate, plan0.period);
     uint256 plan1End = TimelockLibrary.endDate(plan1.start, plan1.amount, plan1.rate, plan1.period);
     // either they have the same end date, or if they dont then they should have the same original end date if they were segmented
-    require(plan0End == plan1End || segmentOriginalEnd[planId0] == segmentOriginalEnd[planId1], 'end error');
+    require(plan0End == plan1End || (segmentOriginalEnd[planId0] == segmentOriginalEnd[planId1] && segmentOriginalEnd[planId0] != 0), 'end error');
     address vault0 = votingVaults[planId0];
     address vault1 = votingVaults[planId1];
     survivingPlan = planId0;

@@ -94,6 +94,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   }
 
   function redeemAndTransfer(uint256 planId, address to) external virtual nonReentrant {
+    require(ownerOf(planId) == msg.sender, '!owner');
     (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(
       planId,
       block.timestamp,
@@ -124,7 +125,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     uint256 latestUnlock
   ) internal {
     require(ownerOf(planId) == holder, '!owner');
-    Plan memory plan = plans[planId];
+    address token = plans[planId].token;
     if (remainder == 0) {
       delete plans[planId];
       _burn(planId);
@@ -132,7 +133,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
       plans[planId].amount = remainder;
       plans[planId].start = latestUnlock;
     }
-    TransferHelper.withdrawTokens(plan.token, holder, balance);
+    TransferHelper.withdrawTokens(token, holder, balance);
     emit PlanRedeemed(planId, balance, remainder, latestUnlock);
   }
 
@@ -200,7 +201,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     require(plan0.period == plan1.period, 'period error');
     uint256 plan0End = TimelockLibrary.endDate(plan0.start, plan0.amount, plan0.rate, plan0.period);
     uint256 plan1End = TimelockLibrary.endDate(plan1.start, plan1.amount, plan1.rate, plan1.period);
-    require(plan0End == plan1End || segmentOriginalEnd[planId0] == segmentOriginalEnd[planId1], 'end error');
+    require(plan0End == plan1End || (segmentOriginalEnd[planId0] == segmentOriginalEnd[planId1] && segmentOriginalEnd[planId0] != 0), 'end error');
     plans[planId0].amount += plans[planId1].amount;
     plans[planId0].rate += plans[planId1].rate;
     uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
@@ -230,7 +231,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   }
 
   function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
-    require(planIds.length == delegatees.length, 'length error');
+    require(planIds.length == delegatees.length, 'array error');
     for (uint256 i; i < planIds.length; i++) {
       _delegateToken(delegatees[i], planIds[i]);
     }
