@@ -9,7 +9,6 @@ import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/utils/cryptography/MerkleProof.sol';
 
 contract ClaimCampaigns is ReentrancyGuard {
-
   address private feeCollector;
   address internal feeLocker;
   uint256 internal feeLockupTime;
@@ -58,7 +57,12 @@ contract ClaimCampaigns is ReentrancyGuard {
     feeLocked = _feeLocked;
   }
 
-  function feeCollectionUpdates(address _feeCollector, address _feeLocker, uint256 _feeLockupTime, bool _feeLocked) external {
+  function feeCollectionUpdates(
+    address _feeCollector,
+    address _feeLocker,
+    uint256 _feeLockupTime,
+    bool _feeLocked
+  ) external {
     require(msg.sender == feeCollector);
     feeCollector = _feeCollector;
     feeLocker = _feeLocker;
@@ -66,38 +70,64 @@ contract ClaimCampaigns is ReentrancyGuard {
     feeLocked = _feeLocked;
   }
 
-  function createCampaign(bytes16 id, Campaign memory campaign, ClaimLockup memory claimLockup, uint256 fee) external nonReentrant {
+  function createUnlockedCampaign(bytes16 id, Campaign memory campaign, uint256 fee) external nonReentrant {
     require(!usedIds[id], 'in use');
     usedIds[id] = true;
-    require(campaign.token != address(0), "0_address");
-    require(campaign.manager != address(0), "0_manager");
-    require(campaign.amount > 0, "0_amount");
-    require(campaign.end > block.timestamp, "end error");
+    require(campaign.token != address(0), '0_address');
+    require(campaign.manager != address(0), '0_manager');
+    require(campaign.amount > 0, '0_amount');
+    require(campaign.end > block.timestamp, 'end error');
+    require(campaign.tokenLockup == TokenLockup.Unlocked, 'locked');
     TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + fee);
     if (fee > 0) {
       if (feeLocked) {
         SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), feeLocker, fee);
-      uint256 rate = fee / feeLockupTime;
-      ILockupPlans(feeLocker).createPlan(feeCollector, campaign.token, fee, block.timestamp, 0, rate, 1);
+        uint256 rate = fee / feeLockupTime;
+        ILockupPlans(feeLocker).createPlan(feeCollector, campaign.token, fee, block.timestamp, 0, rate, 1);
       } else {
         TransferHelper.withdrawTokens(campaign.token, feeCollector, fee);
       }
     }
-    if (campaign.tokenLockup != TokenLockup.Unlocked) {
-      require(claimLockup.tokenLocker != address(0), "invalide locker");
-      (, bool valid) = TimelockLibrary.validateEnd(
-        claimLockup.start,
-        claimLockup.cliff,
-        campaign.amount,
-        claimLockup.rate,
-        claimLockup.period
-      );
-      require(valid);
-      claimLockups[id] = claimLockup;
-      SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), claimLockup.tokenLocker, campaign.amount);
-      emit ClaimLockupCreated(id, claimLockup);
-    }
     campaigns[id] = campaign;
+    emit CampaignStarted(id, campaign);
+  }
+
+  function createLockedCampaign(
+    bytes16 id,
+    Campaign memory campaign,
+    ClaimLockup memory claimLockup,
+    uint256 fee
+  ) external nonReentrant {
+    require(!usedIds[id], 'in use');
+    usedIds[id] = true;
+    require(campaign.token != address(0), '0_address');
+    require(campaign.manager != address(0), '0_manager');
+    require(campaign.amount > 0, '0_amount');
+    require(campaign.end > block.timestamp, 'end error');
+    require(campaign.tokenLockup != TokenLockup.Unlocked, 'not locked');
+    require(claimLockup.tokenLocker != address(0), 'invalide locker');
+    TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + fee);
+    if (fee > 0) {
+      if (feeLocked) {
+        SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), feeLocker, fee);
+        uint256 rate = fee / feeLockupTime;
+        ILockupPlans(feeLocker).createPlan(feeCollector, campaign.token, fee, block.timestamp, 0, rate, 1);
+      } else {
+        TransferHelper.withdrawTokens(campaign.token, feeCollector, fee);
+      }
+    }
+    (, bool valid) = TimelockLibrary.validateEnd(
+      claimLockup.start,
+      claimLockup.cliff,
+      campaign.amount,
+      claimLockup.rate,
+      claimLockup.period
+    );
+    require(valid);
+    claimLockups[id] = claimLockup;
+    SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), claimLockup.tokenLocker, campaign.amount);
+    campaigns[id] = campaign;
+    emit ClaimLockupCreated(id, claimLockup);
     emit CampaignStarted(id, campaign);
   }
 
