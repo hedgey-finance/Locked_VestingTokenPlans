@@ -9,8 +9,4 @@ contract VotingTokenLockupPlans_Bound is VotingTokenLockupPlans {
   function _transfer(address from, address to, uint256 tokenId) internal virtual override {
     revert('Not transferrable');
   }
-
-  function redeemAndTransfer(uint256 planId, address to) external override {
-    revert('Not transferrable');
-  }
 }

@@ -37,9 +37,7 @@ module.exports = () => {
     await bl.createPlan(a.address, token.address, amount, start, cliff, rate, period);
     await bvl.createPlan(a.address, token.address, amount, start, cliff, rate, period);
     await expect(bl.connect(a).transferFrom(a.address, b.address, '1')).to.be.revertedWith('Not transferrable');
-    await expect(bl.connect(a).redeemAndTransfer('1', b.address)).to.be.revertedWith('Not transferrable');
     await expect(bvl.connect(a).transferFrom(a.address, b.address, '1')).to.be.revertedWith('Not transferrable');
-    await expect(bvl.connect(a).redeemAndTransfer('1', b.address)).to.be.revertedWith('Not transferrable');
     await expect(
       bl.connect(a)['safeTransferFrom(address,address,uint256)'](a.address, b.address, '1')
     ).to.be.revertedWith('Not transferrable');
@@ -61,9 +59,6 @@ module.exports = () => {
       'ERC721: caller is not token owner or approved'
     );
   });
-  // it('transferable lockups will not transfer if they dont have a remainder on the redeemAndTransfer', async () => {
-
-  // });
   it('vesting contracts cannot be transferred if boolean off', async () => {
     await vesting.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, false);
     await voteVesting.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, false);

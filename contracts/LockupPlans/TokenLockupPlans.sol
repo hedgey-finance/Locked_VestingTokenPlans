@@ -93,17 +93,6 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     survivingPlanId = _combinePlans(msg.sender, planId0, planId1);
   }
 
-  function redeemAndTransfer(uint256 planId, address to) external virtual nonReentrant {
-    require(ownerOf(planId) == msg.sender, '!owner');
-    (uint256 balance, uint256 remainder, uint256 latestUnlock) = planBalanceOf(
-      planId,
-      block.timestamp,
-      block.timestamp
-    );
-    if (balance > 0) _redeemPlan(msg.sender, planId, balance, remainder, latestUnlock);
-    if (remainder > 0) _transfer(msg.sender, to, planId);
-  }
-
   /****CORE INTERNAL FUNCTIONS*********************************************************************************************************************************************/
 
   function _redeemPlans(uint256[] memory planIds, uint256 redemptionTime) internal {
@@ -186,7 +175,8 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
       plan.start,
       plan.cliff,
       plan.period,
-      planEnd
+      planEnd,
+      segmentEnd
     );
   }
 

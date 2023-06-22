@@ -438,25 +438,6 @@ const redeemSegmentCombineTests = (voting, params) => {
     expect(await token.balanceOf(b.address)).to.eq(amount.mul(2));
     expect((await hedgey.plans('3')).amount).to.eq(0);
   });
-  it('transfers and redeems a plan for locked tokens', async () => {
-    let now = await time.latest();
-    start = BigNumber.from(now).add(params.start);
-    cliff = BigNumber.from(start).add(params.cliff);
-    end = C.planEnd(start, amount, rate, period);
-    await hedgey.createPlan(c.address, token.address, amount, start, cliff, rate, period);
-    await time.increase(params.cliff.add(period));
-    now = BigNumber.from(await time.latest());
-    let check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(1));
-    let tx = await hedgey.connect(c).redeemAndTransfer('5', d.address);
-    expect(tx).to.emit('PlanRedeemed').withArgs('5', check.balance, check.remainder, check.latestUnlock);
-    expect(await token.balanceOf(c.address)).to.eq(check.balance);
-    expect(await hedgey.ownerOf('5')).to.eq(d.address);
-    expect((await hedgey.plans('5')).amount).to.eq(check.remainder);
-    expect((await hedgey.plans('5')).start).to.eq(check.latestUnlock);
-    await time.increase(end.sub(now).add(period));
-    expect(await hedgey.connect(d).redeemPlans(['5'])).to.emit('PlanRedeemed').withArgs('5', check.remainder, 0, end);
-    expect(await token.balanceOf(d.address)).to.eq(check.remainder);
-  });
 };
 
 const redeemVotingVaultTests = (vesting, params) => {
