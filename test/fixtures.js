@@ -14,7 +14,7 @@ module.exports = async () => {
     const BatchPlanner = await ethers.getContractFactory('BatchPlanner');
     const batcher = await BatchPlanner.deploy();
     const ClaimCampaigns = await ethers.getContractFactory('ClaimCampaigns');
-    const claimer = await ClaimCampaigns.deploy(admin.address, locked.address, C.MONTH);
+    const claimer = await ClaimCampaigns.deploy(c.address);
     const Token = await ethers.getContractFactory('Token');
     const token = await Token.deploy(C.E18_1000000.mul(100000), 'Token', 'TK');
     const dai = await Token.deploy(C.E18_1000000.mul(100000), 'DAI', 'DAI');

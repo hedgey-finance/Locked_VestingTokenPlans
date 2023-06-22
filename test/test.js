@@ -180,6 +180,11 @@ describe('Testing for the NFT delegation functions', () =>  {
   });
 })
 
+describe('Testing the transfer and non transfer functions', () => {
+  transferTests();
+});
+
+
 describe('Testing the Claim Campaign tests', () => {
   const paramsMatrix = [
     { totalRecipients: 100, nodeA: 5, nodeB: 33, rate: C.E18_05, start: C.ZERO, period: C.DAY, cliff: C.DAY },
@@ -195,7 +200,4 @@ describe('Testing the Claim Campaign tests', () => {
   claimErrorTests();
 });
 
-describe('Testing the transfer and non transfer functions', () => {
-  transferTests();
-});
 

@@ -9,10 +9,7 @@ import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/utils/cryptography/MerkleProof.sol';
 
 contract ClaimCampaigns is ReentrancyGuard {
-  address private feeCollector;
-  address internal feeLocker;
-  uint256 internal feeLockupTime;
-  bool internal feeLocked;
+  address private donationCollector;
 
   enum TokenLockup {
     Unlocked,
@@ -37,6 +34,15 @@ contract ClaimCampaigns is ReentrancyGuard {
     bytes32 root;
   }
 
+  struct Donation {
+    address tokenLocker;
+    uint256 amount;
+    uint256 rate;
+    uint256 start;
+    uint256 cliff;
+    uint256 period;
+  }
+
   mapping(bytes16 => bool) public usedIds;
   mapping(bytes16 => Campaign) public campaigns;
   mapping(bytes16 => ClaimLockup) public claimLockups;
@@ -50,24 +56,20 @@ contract ClaimCampaigns is ReentrancyGuard {
   event CampaignCancelled(bytes16 indexed id);
   event TokensClaimed(bytes16 indexed id, address indexed claimer, uint256 amountClaimed, uint256 amountRemaining);
 
-  constructor(address _feeCollector, address _feeLocker, uint256 _feeLockupTime) {
-    feeCollector = _feeCollector;
-    feeLocker = _feeLocker;
-    feeLockupTime = _feeLockupTime;
+  constructor(address _donationCollector) {
+    donationCollector = _donationCollector;
   }
 
-  function feeCollectionUpdates(
-    address _feeCollector,
-    address _feeLocker,
-    uint256 _feeLockupTime
-  ) external {
-    require(msg.sender == feeCollector);
-    feeCollector = _feeCollector;
-    feeLocker = _feeLocker;
-    feeLockupTime = _feeLockupTime;
+  function donationUpdates(address newCollector) external {
+    require(msg.sender == donationCollector);
+    donationCollector = newCollector;
   }
 
-  function createUnlockedCampaign(bytes16 id, Campaign memory campaign, uint256 fee) external nonReentrant {
+  function createUnlockedCampaign(
+    bytes16 id,
+    Campaign memory campaign,
+    Donation memory donation
+  ) external nonReentrant {
     require(!usedIds[id], 'in use');
     usedIds[id] = true;
     require(campaign.token != address(0), '0_address');
@@ -75,14 +77,21 @@ contract ClaimCampaigns is ReentrancyGuard {
     require(campaign.amount > 0, '0_amount');
     require(campaign.end > block.timestamp, 'end error');
     require(campaign.tokenLockup == TokenLockup.Unlocked, 'locked');
-    TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + fee);
-    if (fee > 0) {
-      if (feeLockupTime > 0) {
-        SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), feeLocker, fee);
-        uint256 rate = fee / feeLockupTime;
-        ILockupPlans(feeLocker).createPlan(feeCollector, campaign.token, fee, block.timestamp, 0, rate, 1);
+    TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + donation.amount);
+    if (donation.amount > 0) {
+      if (donation.start > 0) {
+        SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), donation.tokenLocker, donation.amount);
+        ILockupPlans(donation.tokenLocker).createPlan(
+          donationCollector,
+          campaign.token,
+          donation.amount,
+          donation.start,
+          donation.cliff,
+          donation.rate,
+          donation.period
+        );
       } else {
-        TransferHelper.withdrawTokens(campaign.token, feeCollector, fee);
+        TransferHelper.withdrawTokens(campaign.token, donationCollector, donation.amount);
       }
     }
     campaigns[id] = campaign;
@@ -93,7 +102,7 @@ contract ClaimCampaigns is ReentrancyGuard {
     bytes16 id,
     Campaign memory campaign,
     ClaimLockup memory claimLockup,
-    uint256 fee
+    Donation memory donation
   ) external nonReentrant {
     require(!usedIds[id], 'in use');
     usedIds[id] = true;
@@ -103,14 +112,21 @@ contract ClaimCampaigns is ReentrancyGuard {
     require(campaign.end > block.timestamp, 'end error');
     require(campaign.tokenLockup != TokenLockup.Unlocked, '!locked');
     require(claimLockup.tokenLocker != address(0), 'invalide locker');
-    TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + fee);
-    if (fee > 0) {
-      if (feeLocked) {
-        SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), feeLocker, fee);
-        uint256 rate = fee / feeLockupTime;
-        ILockupPlans(feeLocker).createPlan(feeCollector, campaign.token, fee, block.timestamp, 0, rate, 1);
+    TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + donation.amount);
+    if (donation.amount > 0) {
+      if (donation.start > 0) {
+        SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), donation.tokenLocker, donation.amount);
+        ILockupPlans(donation.tokenLocker).createPlan(
+          donationCollector,
+          campaign.token,
+          donation.amount,
+          donation.start,
+          donation.cliff,
+          donation.rate,
+          donation.period
+        );
       } else {
-        TransferHelper.withdrawTokens(campaign.token, feeCollector, fee);
+        TransferHelper.withdrawTokens(campaign.token, donationCollector, donation.amount);
       }
     }
     (, bool valid) = TimelockLibrary.validateEnd(
