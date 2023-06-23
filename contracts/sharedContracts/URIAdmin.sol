@@ -12,6 +12,7 @@ contract URIAdmin {
   /// @notice event for when a new URI is set for the NFT metadata linking
   event URISet(string newURI);
 
+  /// @notice event for when the URI admin is deleted
   event URIAdminDeleted(address _admin);
 
 

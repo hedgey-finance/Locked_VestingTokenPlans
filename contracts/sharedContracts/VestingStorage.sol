@@ -3,13 +3,19 @@ pragma solidity 0.8.20;
 
 import '../libraries/TimelockLibrary.sol';
 
+/// @notice This is the storage contract for the Vesting Plans
+/// it contains the logic of the vesting plan object (struct), as well as the events that are utilized and emitted by the contracts
+
 contract VestingStorage {
-    /// @dev the timelock is the storage in a struct of the tokens that are currently being timelocked
-  /// @dev token is the token address being timelocked
-  /// @dev amount is the total amount of tokens in the timelock, which is comprised of the balance and the remainder
-  /// @dev start is the start date when token timelock begins, this can be set at anytime including past and future
-  /// @dev cliffDate is an optional field to add a single cliff date prior to which the tokens cannot be unlocked
-  /// @dev rate is the number of tokens per second being timelocked
+  /// @dev the Plan is the storage in a struct of the tokens that are currently being vested
+  /// @param token is the token address being timelocked
+  /// @param amount is the current amount of tokens locked in the vesting plan, both unclaimed vested and unvested tokens. This parameter is updated each time tokens are redeemed, reset to the new remaining unvested and unclaimed amount
+  /// @param start is the start date when token vesting begins or began. This parameter gets updated each time tokens are redeemed and claimed, reset to the most recent redeem time
+  /// @param cliff is an optional field to add a single cliff date prior to which the tokens cannot be redeemed, this does not change
+  /// @param rate is the amount of tokens that vest in a period. This parameter is constand for each plan. 
+  /// @param period is the length of time in between each discrete time when tokens vest. If this is set to 1, then tokens unlocke every second. Otherwise the period is longer to allow for interval vesting plans. 
+  /// @param vestingAdmin is the adress of the administrator of the plans who can revoke plans at any time prior to them fully vesting. They may also be allowed to transfer plans on behalf of the beneficiary. 
+  /// @param adminTransferOBO is a toggle that when true allows a vesting admin to transfer plans on behalf of (OBO) beneficiaries to another wallet. This is really just used for emergencies. 
   struct Plan {
     address token;
     uint256 amount;
@@ -21,10 +27,10 @@ contract VestingStorage {
     bool adminTransferOBO;
   }
 
-  /// @dev a mapping of the NFT tokenId from _tokenIds to the timelock structs to locate in storage
+  /// @dev a mapping of the planId to the Plan struct. This is also mapped of the NFT token ID to the Plan struct, as the planId is the NFT token Id. 
   mapping(uint256 => Plan) public plans;
 
-  ///@notice Events when a new timelock and NFT is minted this event spits out all of the struct information
+  ///@notice event emitted when a new vesting plan is created, emits the NFT and planId, as well as all of the info from the plan struct
   event PlanCreated(
     uint256 indexed id,
     address indexed recipient,
@@ -39,16 +45,23 @@ contract VestingStorage {
     bool adminTransferOBO
   );
 
-  /// @notice event when the NFT is redeemed, there are two redemption types, partial and full redemption
-  /// if the remainder == 0 then it is a full redemption and the NFT is burned, otherwise it is a partial redemption
+  /// @notice event emitted when a beneficiary redeems some or all of the tokens in their plan. 
+  /// It emits the id of the plan, as well as the amount redeemed, any remaining unvested or unclaimed tokens and the date that was the effective new start date, the reset date. 
   event PlanRedeemed(uint256 indexed id, uint256 amountRedeemed, uint256 planRemainder, uint256 resetDate);
 
+  /// @notice event that is emitted when a plan is revoked. emits the plan Id as well as the amount that is vested and redeemed to the beneficiary, and the amount that is revoked and sent to the vesting admin. 
   event PlanRevoked(uint256 indexed id, uint256 amountRedeemed, uint256 revokedAmount);
 
+  /// @notice event emitted when a vesting admin changes itself, assigning a new vesting admin to the plan
   event VestingPlanAdminChanged(uint256 indexed id, address _newVestingAdmin);
 
+  /// @notice event emitted when a plan admin transfers an plan and NFT on behalf of a beneficiary from one wallet address to another
   event PlanTransferredByVestingAdmin(uint256 indexed id, address indexed from, address indexed to);
 
+  /// @notice public function to get the balance of a plan, this function is used by the contracts to calculate how much can be redeemed and revoked, and how to reset the start date
+  /// @param planId is the NFT token ID and plan Id
+  /// @param timeStamp is the effective current time stamp, can be polled for the future for estimating redeemable tokens
+  /// @param redemptionTime is the time of the request that the user is attemptint to redeem tokens, which can be prior to the timeStamp, though not beyond it. 
   function planBalanceOf(
     uint256 planId,
     uint256 timeStamp,
@@ -66,7 +79,7 @@ contract VestingStorage {
     );
   }
 
-  /// @dev function to calculate the end date in seconds of a given unlock timelock
+  /// @dev function to calculate the end date in seconds of a given vesting plan
   /// @param planId is the NFT token ID
   function planEnd(uint256 planId) public view returns (uint256 end) {
     Plan memory plan = plans[planId];

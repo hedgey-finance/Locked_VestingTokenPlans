@@ -8,6 +8,10 @@ import '../interfaces/ILockupPlans.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '@openzeppelin/contracts/utils/cryptography/MerkleProof.sol';
 
+
+/// @title ClaimCampaigns - The smart contract to distribute your tokens to the community via claims
+/// @notice This tool allows token projects to safely, securely and efficiently distribute your tokens in large scale to your community, whereby they can claim them based on your criteria of wallet address and amount. 
+
 contract ClaimCampaigns is ReentrancyGuard {
   /// @notice the address that collects any donations given to the team
   address private donationCollector;
