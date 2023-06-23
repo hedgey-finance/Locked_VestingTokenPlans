@@ -38,6 +38,7 @@ const segmentTests = (voting, params) => {
     start = BigNumber.from(now).add(params.start);
     cliff = start.add(params.cliff);
     end = C.planEnd(start, amount, rate, period);
+    console.log(`original plan end: ${end}`)
     await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
     // now holder A will segment it into two plans
     expect(await hedgey.connect(a).segmentPlan('1', [segmentAmount]))
@@ -66,6 +67,8 @@ const segmentTests = (voting, params) => {
     expect(await hedgey.balanceOf(a.address)).to.eq(2);
     expect(await hedgey.ownerOf('1')).to.eq(a.address);
     expect(await hedgey.ownerOf('2')).to.eq(a.address);
+    console.log(`plan 1 end: ${planEnd}`);
+    console.log(`segment end: ${segmentEnd}`);
   });
   it('Recombines the two segmented plans', async () => {
     // going to recombine plans 1 and two
@@ -82,6 +85,7 @@ const segmentTests = (voting, params) => {
     expect(plan.period).to.eq(period);
     const _end = await hedgey.planEnd('1');
     expect(_end).to.eq(end);
+    console.log(`recombined end: ${_end}`);
   });
   it('segments plan 1 with two segments', async () => {
     const secondSegment = params.secondSegment
@@ -151,8 +155,8 @@ const segmentTests = (voting, params) => {
   });
   it('creates two new plans with the same data, and the combines them', async () => {
     // create plans 9 and 10
-    await hedgey.createPlan(a.address, token.address, segmentAmount, start, cliff, rate, period);
-    await hedgey.createPlan(a.address, token.address, segmentAmount, start, cliff, rate, period);
+    await hedgey.createPlan(a.address, token.address, segmentAmount, start, start, rate, period);
+    await hedgey.createPlan(a.address, token.address, segmentAmount, start, start, rate, period);
     await hedgey.connect(a).combinePlans('9', '10');
   });
   it('creates two new plans with same data, segments them, and then combines the two unrelated segments', async () => {
@@ -170,8 +174,8 @@ const segmentTests = (voting, params) => {
     let amtB = C.E18_1000.mul(6);
     let rateA = C.E18_10;
     let rateB = C.E18_10.mul(2);
-    await hedgey.createPlan(a.address, token.address, amtA, start, cliff, rateA, period);
-    await hedgey.createPlan(a.address, token.address, amtB, start, cliff, rateB, period);
+    await hedgey.createPlan(a.address, token.address, amtA, start, start, rateA, period);
+    await hedgey.createPlan(a.address, token.address, amtB, start, start, rateB, period);
     await hedgey.connect(a).combinePlans('15', '16');
   });
 };

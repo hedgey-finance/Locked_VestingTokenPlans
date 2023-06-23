@@ -50,8 +50,7 @@ library TimelockLibrary {
     uint256 currentTime,
     uint256 redemptionTime
   ) internal pure returns (uint256 unlockedBalance, uint256 lockedBalance, uint256 unlockTime) {
-    require(redemptionTime <= currentTime, "future time");
-    require(redemptionTime > start, "< start");
+    require(redemptionTime >= start, "< start");
     if (start > currentTime || cliffDate > currentTime) {
       lockedBalance = amount;
       unlockTime = start;

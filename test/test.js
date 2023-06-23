@@ -15,6 +15,21 @@ const { votingVaultTests, votingVaultErrorTests } = require('./tests/votingVault
 const delegateTests = require('./tests/delegateTests');
 const transferTests = require('./tests/transferTests');
 
+const mainParamsMatrix = [
+  { amount: C.E18_1000, period: C.DAY, rate: C.E18_10, start: C.ZERO, cliff: C.DAY, balanceCheck: C.WEEK },
+    { amount: C.E18_1000, period: C.DAY, rate: C.E18_10, start: C.ZERO, cliff: C.WEEK, balanceCheck: C.WEEK },
+    { amount: C.E18_1000, period: C.ONE, rate: C.E6_10000.mul(44000), start: C.ZERO, cliff: C.WEEK, balanceCheck: C.DAY.mul(8) },
+    { amount: C.E18_1000.mul(4), period: C.ONE, rate: C.E6_10000.mul(90099), start: C.ZERO, cliff: C.WEEK, balanceCheck: C.WEEK },
+    {
+      amount: C.E18_10000.mul(7),
+      period: C.WEEK,
+      rate: C.E18_13.mul(10),
+      start: C.ZERO,
+      cliff: C.MONTH,
+      balanceCheck: C.DAY.mul(34),
+    },
+]
+
 describe('Testing the URI Admin functions', () => {
   adminTests(true, false);
   adminTests(true, true);
@@ -23,19 +38,7 @@ describe('Testing the URI Admin functions', () => {
 });
 
 describe('Testing the Happy Path', () => {
-  const paramsMatrix = [
-    { amount: C.E18_1000, period: C.DAY, rate: C.E18_10, start: 0, cliff: C.DAY, balanceCheck: C.WEEK },
-    { amount: C.E18_1000, period: C.DAY, rate: C.E18_10, start: 0, cliff: C.WEEK, balanceCheck: C.WEEK },
-    {
-      amount: C.E18_10000.mul(7),
-      period: C.WEEK,
-      rate: C.E18_13.mul(10),
-      start: 0,
-      cliff: C.MONTH,
-      balanceCheck: C.DAY.mul(34),
-    },
-  ];
-  paramsMatrix.forEach((params) => {
+  mainParamsMatrix.forEach((params) => {
     happyPath(true, true, params);
     happyPath(true, false, params);
     happyPath(false, true, params);
@@ -44,11 +47,7 @@ describe('Testing the Happy Path', () => {
 });
 
 describe('Testing the create methods for minting a new plan', () => {
-  const paramsMatrix = [
-    { amount: C.E18_100, rate: C.E18_05, start: C.ZERO, period: C.DAY, cliff: C.DAY },
-    { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
-  ];
-  paramsMatrix.forEach((params) => {
+  mainParamsMatrix.forEach((params) => {
     createTests(true, true, params);
     createTests(true, false, params);
     createTests(false, true, params);
@@ -61,11 +60,7 @@ describe('Testing the create methods for minting a new plan', () => {
 });
 
 describe('Testing redeeming funtions', () => {
-  const paramsMatrix = [
-    { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
-    { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
-  ];
-  paramsMatrix.forEach((params) => {
+  mainParamsMatrix.forEach((params) => {
     redeemTests(true, true, params);
     redeemTests(true, false, params);
     redeemTests(false, true, params);
@@ -79,11 +74,7 @@ describe('Testing redeeming funtions', () => {
 });
 
 describe('Testing the revoke functions', () => {
-  const paramsMatrix = [
-    { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
-    { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
-  ];
-  paramsMatrix.forEach((params) => {
+  mainParamsMatrix.forEach((params) => {
     revokeTests(true, params);
     revokeTests(false, params);
   });
@@ -97,7 +88,7 @@ describe('Testing the Segmentation and Combination Methods', () => {
       amount: C.E18_1000,
       period: C.DAY,
       rate: C.E18_10,
-      start: 0,
+      start: C.ZERO,
       cliff: C.DAY,
       segmentAmount: C.E18_100.mul(5),
       secondSegment: C.E18_100,
@@ -106,7 +97,7 @@ describe('Testing the Segmentation and Combination Methods', () => {
       amount: C.E18_1000.mul(8),
       period: C.DAY,
       rate: C.E18_10,
-      start: 0,
+      start: C.ZERO,
       cliff: C.WEEK,
       segmentAmount: C.E18_100,
       secondSegment: C.E18_100.mul(3),
@@ -115,7 +106,7 @@ describe('Testing the Segmentation and Combination Methods', () => {
       amount: C.E18_1000.mul(12),
       period: C.DAY,
       rate: C.E18_12,
-      start: 0,
+      start: C.ZERO,
       cliff: C.WEEK,
       segmentAmount: C.E18_1000,
       secondSegment: C.E18_1000.mul(3),
@@ -124,7 +115,7 @@ describe('Testing the Segmentation and Combination Methods', () => {
       amount: C.E18_10000,
       period: C.DAY,
       rate: C.E18_12,
-      start: 0,
+      start: C.ZERO,
       cliff: C.WEEK,
       segmentAmount: C.E18_1000.mul(7),
       secondSegment: C.E18_100.mul(5),
@@ -133,7 +124,7 @@ describe('Testing the Segmentation and Combination Methods', () => {
       amount: C.E18_10000.mul(7),
       period: C.WEEK,
       rate: C.E18_13.mul(10),
-      start: 0,
+      start: C.ZERO,
       cliff: C.MONTH,
       segmentAmount: C.E18_13.mul(100),
       secondSegment: C.E18_100.mul(2),
@@ -142,11 +133,29 @@ describe('Testing the Segmentation and Combination Methods', () => {
       amount: C.E18_10000.mul(72),
       period: C.WEEK,
       rate: C.E18_13.mul(10),
-      start: C.DAY,
+      start: C.ZERO,
       cliff: C.MONTH,
       segmentAmount: C.E18_1000.mul(43),
       secondSegment: C.E18_100.mul(4),
     },
+    {
+      amount: C.E18_10000.mul(80),
+      period: C.ONE,
+      rate: C.E12_1.mul(10000),
+      start: C.ZERO,
+      cliff: C.DAY,
+      segmentAmount: C.E18_1000,
+      secondSegment: C.E18_1000.mul(5)
+    },
+    {
+      amount: C.E18_10000.mul(45),
+      period: C.ONE,
+      rate: C.E12_1.mul(10000),
+      start: C.ZERO,
+      cliff: C.DAY,
+      segmentAmount: C.E18_05.mul(9),
+      secondSegment: C.E18_1000.mul(5)
+    }
   ];
   paramsMatrix.forEach((params) => {
     segmentTests(false, params);
@@ -157,11 +166,7 @@ describe('Testing the Segmentation and Combination Methods', () => {
 });
 
 describe('Testing the voting vault setup and functions', () => {
-  const paramsMatrix = [
-    { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
-    { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
-  ];
-  paramsMatrix.forEach((params) => {
+  mainParamsMatrix.forEach((params) => {
     votingVaultTests(true, params);
     votingVaultTests(false, params);
   });
@@ -170,11 +175,7 @@ describe('Testing the voting vault setup and functions', () => {
 });
 
 describe('Testing for the NFT delegation functions', () =>  {
-  const paramsMatrix = [
-    { amount: C.E18_1000, rate: C.E18_05, start: C.ZERO, period: C.ONE, cliff: C.ONE.mul(50) },
-    { amount: C.E18_1000.mul(7), rate: C.E18_10.mul(13), start: C.ZERO, period: C.DAY, cliff: C.DAY },
-  ];
-  paramsMatrix.forEach((params) => {
+  mainParamsMatrix.forEach((params) => {
     delegateTests(true, params);
     delegateTests(false, params);
   });

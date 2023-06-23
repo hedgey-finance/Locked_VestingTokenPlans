@@ -21,12 +21,12 @@ module.exports = (vesting, voting, params) => {
     d = s.d;
     token = s.token;
     await token.approve(hedgey.address, C.E18_1000000);
-    let now = await time.latest();
+    const now = await time.latest();
     amount = params.amount;
     period = params.period;
     rate = params.rate;
-    start = BigNumber.from(now).add(params.start);
-    cliff = BigNumber.from(now).add(params.cliff);
+    start = params.start.add(now);
+    cliff = params.cliff.add(start);
     end = C.planEnd(start, amount, rate, period);
     if (vesting) {
       expect(
@@ -53,8 +53,8 @@ module.exports = (vesting, voting, params) => {
     expect(await hedgey.lockedBalances(a.address, token.address)).to.eq(amount);
   });
   it('moves forward and checks available balances and partially redeems', async () => {
-    let now = await time.increase(params.balanceCheck);
-    const partialTime = now - period;
+    let now = BigNumber.from(await time.increase(params.balanceCheck));
+    const partialTime = now.sub(C.bigMax(period, 100));
     const calculatedPartial = C.balanceAtTime(start, cliff, amount, rate, period, now, partialTime);
     const calculatedFull = C.balanceAtTime(start, cliff, amount, rate, period, now, now);
     const partial = await hedgey.planBalanceOf('1', now, partialTime);

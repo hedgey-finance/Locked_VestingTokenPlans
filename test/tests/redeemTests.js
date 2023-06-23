@@ -39,7 +39,7 @@ const redeemTests = (vesting, voting, params) => {
     expect(await hedgey.planEnd(planId)).to.eq(end);
     now = await time.latest();
     // check time for one period from start, two periods from start, cliff date, one period after cliff, two periods after cliff, end date
-    let check = start.add(period);
+    let check = start.add(C.bigMax(period, 2));
     let checkNow = await hedgey.planBalanceOf(planId, now, check);
     let _checkNow = C.balanceAtTime(start, cliff, amount, rate, period, now, check);
     expect(checkNow.balance).to.eq(_checkNow.balance);
@@ -77,7 +77,7 @@ const redeemTests = (vesting, voting, params) => {
     expect(checkNow.remainder).to.eq(_checkNow.remainder);
     expect(checkNow.latestUnlock).to.eq(_checkNow.latestUnlock);
 
-    check = cliff.add(period);
+    check = cliff.add(C.bigMax(period, 100));
     checkNow = await hedgey.planBalanceOf(planId, now, check);
     _checkNow = C.balanceAtTime(start, cliff, amount, rate, period, now, check);
     expect(checkNow.balance).to.eq(_checkNow.balance);
@@ -96,7 +96,7 @@ const redeemTests = (vesting, voting, params) => {
     expect(checkNow.remainder).to.eq(_checkNow.remainder);
     expect(checkNow.latestUnlock).to.eq(_checkNow.latestUnlock);
 
-    check = check.add(period);
+    check = check.add(C.bigMax(period, 100));
     checkNow = await hedgey.planBalanceOf(planId, now, check);
     _checkNow = C.balanceAtTime(start, cliff, amount, rate, period, now, check);
     expect(checkNow.balance).to.eq(_checkNow.balance);
@@ -135,7 +135,7 @@ const redeemTests = (vesting, voting, params) => {
     expect(checkNow.latestUnlock).to.eq(_checkNow.latestUnlock);
   });
   it('redeems a single plan with multiple partial redemptions', async () => {
-    let difference = cliff.add(period).sub(await time.latest());
+    let difference = cliff.add(C.bigMax(period, 100)).sub(await time.latest());
     let redemptionTime = BigNumber.from(await time.increase(difference));
     let now = await time.latest();
     let t_0 = redemptionTime;
@@ -144,7 +144,7 @@ const redeemTests = (vesting, voting, params) => {
     expect(tx).to.emit('PlanRedeemed').withArgs('1', cb.balance, cb.remainder, cb.latestUnlock);
     expect(await token.balanceOf(hedgey.address)).to.eq(amount.sub(cb.balance));
     expect(await token.balanceOf(a.address)).to.eq(cb.balance);
-    now = await time.increase(period.mul(3));
+    now = await time.increase((C.bigMax(period, 100)).mul(3));
     redemptionTime = BigNumber.from(now).sub(period);
     let periods = redemptionTime.sub(t_0).div(period);
     const preBalance = await token.balanceOf(a.address);
@@ -156,7 +156,7 @@ const redeemTests = (vesting, voting, params) => {
     expect(await token.balanceOf(hedgey.address)).to.eq(amount.sub(preBalance.add(periods.mul(rate))));
 
     difference = end.sub(now);
-    await time.increase(difference.add(period));
+    await time.increase(difference.add(C.bigMax(period, 100)));
     expect(await hedgey.connect(a).partialRedeemPlans(['1'], end))
       .to.emit('PlanRedeemed')
       .withArgs('1', cb.remainder, 0, end);
@@ -192,7 +192,7 @@ const redeemTests = (vesting, voting, params) => {
         )
       : await batcher.batchLockingPlans(hedgey.address, token.address, totalAmount, batch, period, '0');
     // plans 2 - 6
-    now = await time.increase(params.cliff.add(period));
+    now = await time.increase(params.cliff.add(C.bigMax(period, 100)));
     const partial = C.balanceAtTime(start, cliff, amount, rate, period, now, cliff).balance;
     const periods = cliff.sub(start).div(period);
     let redeemTx = await hedgey.connect(b).partialRedeemPlans(['2', '3', '4', '5', '6'], cliff);
@@ -201,7 +201,7 @@ const redeemTests = (vesting, voting, params) => {
   });
   it('redeems muliple partials, skipping one that had previously been redeemed', async () => {
     // previous 5 have been redeemed at cliff - move forward to 3 periods and redeem number 3
-    now = await time.increase(period.mul(3));
+    now = await time.increase(C.bigMax(period, 100).mul(3));
     let tx = await hedgey.connect(b).partialRedeemPlans(['3'], now);
     const amountRedeemed = (await tx.wait()).events[1].args.amountRedeemed;
     let bal = await token.balanceOf(b.address);
@@ -234,7 +234,7 @@ const redeemTests = (vesting, voting, params) => {
     expect(plan.start).to.eq(check.latestUnlock);
     expect(plan.amount).to.eq(check.remainder);
     // progress forward in time a few periods
-    now = BigNumber.from(await time.increase(period.mul(4)));
+    now = BigNumber.from(await time.increase(C.bigMax(period, 100).mul(4)));
     let _check = C.balanceAtTime(check.latestUnlock, cliff, check.remainder, rate, period, now.add(1), now.add(1));
     expect(await hedgey.connect(c).redeemPlans(['7']))
       .to.emit('PlanRedeemed')
@@ -291,7 +291,7 @@ const redeemTests = (vesting, voting, params) => {
         )
       : await batcher.batchLockingPlans(hedgey.address, token.address, totalAmount, batch, period, '10');
     // plans 2 - 6
-    now = BigNumber.from(await time.increase(params.cliff.add(period.mul(3))));
+    now = BigNumber.from(await time.increase(params.cliff.add(C.bigMax(period, 100).mul(3))));
     let check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(1));
     let redeemTx = await hedgey.connect(d).redeemPlans(['8', '9', '10', '11', '12']);
     for (let i = 0; i < 5; i++) {
@@ -309,7 +309,7 @@ const redeemTests = (vesting, voting, params) => {
     vesting
       ? await hedgey.createPlan(a.address, dai.address, amount, start, cliff, rate, period, admin.address, true)
       : await hedgey.createPlan(a.address, dai.address, amount, start, cliff, rate, period);
-    now = BigNumber.from(await time.increase(params.cliff.add(period.mul(3))));
+    now = BigNumber.from(await time.increase(params.cliff.add(C.bigMax(period, 100).mul(3))));
     let check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(1));
     expect(await hedgey.connect(a).redeemAllPlans())
       .to.emit('PlanRedeemed')
@@ -327,7 +327,7 @@ const redeemTests = (vesting, voting, params) => {
     vesting
       ? await hedgey.createPlan(d.address, dai.address, amount, start, cliff, rate, period, admin.address, true)
       : await hedgey.createPlan(d.address, dai.address, amount, start, cliff, rate, period);
-    now = BigNumber.from(await time.increase(params.cliff.add(period.mul(3))));
+    now = BigNumber.from(await time.increase(params.cliff.add(C.bigMax(period, 100).mul(3))));
     let partialCheck = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), cliff.sub(period));
     expect(await hedgey.connect(d).partialRedeemPlans(['14'], cliff.sub(period)))
       .to.emit('PlanRedeemed')
@@ -407,7 +407,7 @@ const redeemSegmentCombineTests = (voting, params) => {
     end = C.planEnd(start, amount, rate, period);
     await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
     const seg = await hedgey.connect(a).segmentPlan('1', [segment]);
-    now = await time.increase(params.cliff.add(period));
+    now = await time.increase(params.cliff.add(C.bigMax(period, 100)));
     let check = C.balanceAtTime(start, cliff, segment, rate.div(2), period, now, cliff);
     const tx = await hedgey.connect(a).partialRedeemPlans(['1', '2'], cliff);
     expect(await token.balanceOf(a.address)).to.eq(check.balance.mul(2));
@@ -427,7 +427,7 @@ const redeemSegmentCombineTests = (voting, params) => {
     await hedgey.createPlan(b.address, token.address, amount, start, cliff, rate, period);
     await hedgey.createPlan(b.address, token.address, amount, start, cliff, rate, period);
     await hedgey.connect(b).combinePlans('3', '4');
-    now = await time.increase(params.cliff.add(period));
+    now = await time.increase(params.cliff.add(C.bigMax(period, 100)));
     let check = C.balanceAtTime(start, cliff, amount.mul(2), rate.mul(2), period, now, cliff);
     const tx = await hedgey.connect(b).partialRedeemPlans(['3'], cliff);
     expect(await token.balanceOf(b.address)).to.eq(check.balance);
@@ -551,7 +551,7 @@ const redeemErrorTests = (vesting, voting) => {
     await time.increase(cliff.sub(now).add(period));
     await expect(hedgey.connect(b).redeemPlans(['1'])).to.be.revertedWith('!owner');
   });
-  it('gets skipped and does not redeem if the redemption time is before the start', async () => {
+  it('reverts if the redemption time is before the start', async () => {
     let now = await time.latest();
     start = C.DAY.add(now);
     cliff = BigNumber.from(start).add(C.DAY);
@@ -563,12 +563,7 @@ const redeemErrorTests = (vesting, voting) => {
     let plan2 = await hedgey.plans('2');
     const amt = plan2.amount;
     const start2 = plan2.start;
-    await hedgey.connect(a).redeemPlans(['1', '2']);
-    expect(await dai.balanceOf(a.address)).to.eq(0);
-    expect(await dai.balanceOf(hedgey.address)).to.eq(amount);
-    let _plan2 = await hedgey.plans('2');
-    expect(_plan2.amount).to.eq(amt);
-    expect(_plan2.start).to.eq(start2);
+    await expect(hedgey.connect(a).redeemPlans(['1', '2'])).to.be.revertedWith("< start");
   });
   it('is skipped if the redemption time is before the cliff', async () => {
     let now = await time.latest();

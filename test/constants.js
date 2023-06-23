@@ -2,9 +2,18 @@ const BigNumber = require('ethers').BigNumber;
 const { ethers } = require('hardhat');
 
 const bigMin = (a, b) => {
+  a = BigNumber.from(a);
+  b = BigNumber.from(b);
   if (a.lte(b)) return a;
   else return b;
 };
+
+const bigMax = (a, b) => {
+  a = BigNumber.from(a);
+  b = BigNumber.from(b);
+  if (a.gte(b)) return a;
+  else return b;
+}
 
 const randomBigNum = (max, min) => {
   let num = Math.round(Math.random() * max);
@@ -66,6 +75,7 @@ module.exports = {
   E6_100: BigNumber.from(10).pow(6).mul(100),
   E6_1000: BigNumber.from(10).pow(6).mul(1000),
   E6_10000: BigNumber.from(10).pow(6).mul(10000),
+  E12_1: BigNumber.from(10).pow(12),
   E18_05: BigNumber.from(10).pow(18).div(2),
   E18_1: BigNumber.from(10).pow(18), // 1e18
   E18_3: BigNumber.from(10).pow(18).mul(3), // 3e18
@@ -86,6 +96,7 @@ module.exports = {
   WEEK: BigNumber.from(60).mul(60).mul(24).mul(7),
   MONTH: BigNumber.from(60).mul(60).mul(24).mul(30),
   bigMin,
+  bigMax,
   randomBigNum,
   getVal,
   planEnd,

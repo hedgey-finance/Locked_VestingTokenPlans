@@ -15,8 +15,24 @@ The plans super powers include:
   - Ability to break up lockup plans into smaller segements, and then recombine them (for sub-delegation of voting, or selling in OTC secondary markets)
 
 
+## Contracts Overview
+These contracts below are the set of contracts that any user will interact with, whether via user interface application or by direct smart contract interaction. 
+
+Contracts that hold tokens owned by end users, which each amount of tokens vesting / unlocking by the beneficiary is an NFT object with the vesting / unlocking details: 
+
+- TokenVestingPlans.sol: Vesting Plans with snapshot voting optimization
+- VotingTokenVestingPlans.sol: Vesting Plans built with on-chain governance functionality
+- TokenLockupPlans.sol: Lockup Plans with snapshot voting optimization (NFTs are transferable)
+- VotingTokenLockupPlans.sol: Lockup Plans built with on-chain governance functionality (NFTs are transferable)
+- TokenLockupPlans_Bound.sol: Lockup plans with snapshot voting optimization (NFTs are not transferable)
+- VotingTokenLockupPlans_Bound.sol: Lockup plans built with on-chain governance functionality (NFTs are not transferable)
+
+Intermediary Contracts that temporarily hold tokens or route them from creators to beneficiaries: 
+- BatchPlanner.sol: Contract for creating multiple vesting or lockup plans at the same time in a large batch. A simple contract to assist with generating many NFT vesting and lockup plans in a single transaction
+- ClaimCampaigns.sol: Contract for creating a community token claim distribution, which stores tokens on behalf of the creator before the claim process, when tokens are distributed to the claimants. Interfaces with the Vesting and Lockup plans so that claim distributions can distribute locked or vesting tokens, or unlocked liquid tokens. 
+
 ## Repository Navigation
-The smart contracts are all located in the ./contracts folder. The Final End User contracts are in the ./contracts/LockupPlans and ./contracts/VestingPlans folders. The lockup plan contracts are in the Lockupplans folder, and vesting plan contracts in the VestingPlans folder. The on-chain voting optimized contracts are named with Voting in the contract name, while the snapshot optimized contracts do not contain this explicit word. 
+The smart contracts are all located in the ./contracts folder. The Final End User contracts are in the ./contracts/LockupPlans and ./contracts/VestingPlans folders. The lockup plan contracts are in the LockupPlans folder, and vesting plan contracts in the VestingPlans folder. The on-chain voting optimized contracts are named with Voting in the contract name, while the snapshot optimized contracts do not contain this explicit word. 
 
 Periphery Contracts are used in addition to the core for users to quickly create and distribute multiple plans at the same time, either by direct distribution using the BatchPlanner, or via an upload and claim method via the ClaimCampaigner. 
 
@@ -36,6 +52,8 @@ npm install
 npx hardhat compile
 npx hardhat test
 ```
+
+There are 1038 Tests that should all pass. You can run ```npx hardhat coverage``` for the coverage report, however it seems to be failing as it returns 0% as if none of the tests ran any of the functions on the smart contracts. 
 
 ## Deployment
 To deploy the contracts you should create a .env file, and add your private keys, network rpc URL, and etherscan API Key. Update the deploy.js file in the /scripts folder to deploy the desired contracts, and update the constructor argument parameters with the desired ERC721 Collection Name and Symbol. Then you can run in the terminal the hardhat deployer (note it doesn't work for all networks, some EVMs are not supported by hardhat).
