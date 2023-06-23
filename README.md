@@ -42,7 +42,9 @@ The core storage for the lockup and vesting plans is in the ./contracts/sharedCo
 
 ERC721Delegate contract is a special iteration of the ERC721Enumerable extension that enables users to delegate their NFT to another wallet, which is optimized for snapshot voting strategies. The snapshot optimized contracts inherit the ERC721Delegate, while the on-chain voting contracts inherit the ERC721Enumerable for gas savings and efficiencies. 
 
-There are technical documentation in this repository that describe the contracts functions and uses, and technical requirements. For more information please visit [Hedgey Website](https://hedgey.finance)
+There are technical documentation in this repository in the technical documentation folder that describe the contracts functions and uses, and technical requirements. For more information please visit [Hedgey Website](https://hedgey.finance)
+
+The Version1 of these contracts can be found with audit at: https://github.com/hedgey-finance/StreamVestingNFT (and audit: https://github.com/hedgey-finance/StreamVestingNFT/blob/master/audit/Hedgey_SC%20Audit%20Report_06042023_%5BSA-1070%5D.pdf).
 
 ## Testing
 Clone repository
