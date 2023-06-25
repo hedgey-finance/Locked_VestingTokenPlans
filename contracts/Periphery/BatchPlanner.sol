@@ -23,7 +23,7 @@ contract BatchPlanner {
     uint256 rate;
   }
   /// @dev event used for internal analytics and reporting only
-  event BatchCreated(uint8 mintType);
+  event BatchCreated(address indexed creator, address token, uint256 recipients, uint256 totalAmount, uint8 mintType);
 
 
   /// @notice function to create a batch of lockup plans
@@ -62,7 +62,7 @@ contract BatchPlanner {
       amountCheck += plans[i].amount;
     }
     require(amountCheck == totalAmount, 'totalAmount error');
-    emit BatchCreated(mintType);
+    emit BatchCreated(msg.sender, token, plans.length, totalAmount, mintType);
   }
 
 
@@ -108,6 +108,6 @@ contract BatchPlanner {
       amountCheck += plans[i].amount;
     }
     require(amountCheck == totalAmount, 'totalAmount error');
-    emit BatchCreated(mintType);
+    emit BatchCreated(msg.sender, token, plans.length, totalAmount, mintType);
   }
 }
