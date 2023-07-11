@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 
 /// @notice Library to assist with calculation methods of the balances, ends, period amounts for a given plan
@@ -23,11 +23,6 @@ library TimelockLibrary {
     end = (amount % rate == 0) ? (amount / rate) * period + start : ((amount / rate) * period) + period + start;
     require(cliff <= end, 'cliff > end');
     valid = true;
-  }
-
-  /// @notice function to calculate the total periods in a given plan based on the rate and amount
-  function totalPeriods(uint256 rate, uint256 amount) internal pure returns (uint256 periods) {
-    periods = amount / rate;
   }
 
 

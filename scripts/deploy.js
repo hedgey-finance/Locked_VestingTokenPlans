@@ -11,15 +11,15 @@ async function deployNFTContract(artifact, args, uriBase) {
 }
 
 async function deployPeriphery(donationAddress) {
-    const Planner = await ethers.getContractFactory('BatchPlanner');
-    const planner = await Planner.deploy();
-    await planner.deployed();
-    console.log(`new planner deployed to ${planner.address}`);
+    // const Planner = await ethers.getContractFactory('BatchPlanner');
+    // const planner = await Planner.deploy();
+    // await planner.deployed();
+    // console.log(`new planner deployed to ${planner.address}`);
     const Claimer = await ethers.getContractFactory('ClaimCampaigns');
     const claimer = await Claimer.deploy(donationAddress);
     await claimer.deployed();
     console.log(`new claimer deployed to ${claimer.address}`);
 }
 
-const donationAddress = '0x...';
-deployPeriphery(donationAddress);
+const donationAddress = '';
+//deployPeriphery(donationAddress);

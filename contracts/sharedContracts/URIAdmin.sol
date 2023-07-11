@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity 0.8.20;
+pragma solidity 0.8.19;
 
 contract URIAdmin {
     /// @dev baseURI is the URI directory where the metadata is stored
