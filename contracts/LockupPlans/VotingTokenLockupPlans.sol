@@ -273,12 +273,11 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     uint256 end = TimelockLibrary.endDate(plan.start, plan.amount, plan.rate, plan.period);
     _planIds.increment();
     newPlanId = _planIds.current();
-    _safeMint(holder, newPlanId);
     uint256 planAmount = plan.amount - segmentAmount;
-    plans[planId].amount = planAmount;
     uint256 planRate = (plan.rate * ((planAmount * (10 ** 18)) / plan.amount)) / (10 ** 18);
-    plans[planId].rate = planRate;
-    uint256 segmentRate = plan.rate - planRate;
+    uint256 segmentRate = (segmentAmount % (plan.rate - planRate) == 0)
+      ? (plan.period * segmentAmount) / (end - plan.start)
+      : (plan.period * segmentAmount) / (end - plan.start - plan.period);
     (uint256 planEnd, bool validPlan) = TimelockLibrary.validateEnd(
       plan.start,
       plan.cliff,
@@ -297,6 +296,9 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     uint256 endCheck = segmentOriginalEnd[planId] == 0 ? end : segmentOriginalEnd[planId];
     require(planEnd >= endCheck, 'plan end error');
     require(segmentEnd >= endCheck, 'segmentEnd error');
+    plans[planId].amount = planAmount;
+    plans[planId].rate = planRate;
+    _safeMint(holder, newPlanId);
     plans[newPlanId] = Plan(plan.token, segmentAmount, plan.start, plan.cliff, segmentRate, plan.period);
     if (segmentOriginalEnd[planId] == 0) {
       segmentOriginalEnd[planId] = end;
