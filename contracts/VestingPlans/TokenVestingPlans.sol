@@ -114,7 +114,13 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /// @param planIds is the array of the plan ids to be redeemed. the caller must be the vesting admin for all of the plans.
   function revokePlans(uint256[] memory planIds) external nonReentrant {
     for (uint256 i; i < planIds.length; i++) {
-      _revokePlan(msg.sender, planIds[i]);
+      _revokePlan(msg.sender, planIds[i], block.timestamp);
+    }
+  }
+
+  function futureRevokePlans(uint256[] memory planIds, uint256 revokeTime) external nonReentrant {
+    for (uint256 i; i < planIds.length; i++) {
+      _revokePlan(msg.sender, planIds[i], revokeTime);
     }
   }
 
@@ -223,10 +229,11 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /// finally the function deletes the plan held in storage and burns the NFT. 
   /// @param vestingAdmin is the vestingAdmin address 
   /// @param planId is the id of the plan and NFT
-  function _revokePlan(address vestingAdmin, uint256 planId) internal {
+  function _revokePlan(address vestingAdmin, uint256 planId, uint256 revokeTime) internal {
     Plan memory plan = plans[planId];
     require(vestingAdmin == plan.vestingAdmin, '!vestingAdmin');
-    (uint256 balance, uint256 remainder, ) = planBalanceOf(planId, block.timestamp, block.timestamp);
+    require(revokeTime >= block.timestamp, "!past revoke");
+    (uint256 balance, uint256 remainder, ) = planBalanceOf(planId, block.timestamp, revokeTime);
     require(remainder > 0, '!Remainder');
     address holder = ownerOf(planId);
     delete plans[planId];
