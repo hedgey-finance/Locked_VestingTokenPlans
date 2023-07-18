@@ -239,7 +239,7 @@ describe('Testing the Segmentation and Combination Methods', () => {
   paramsMatrix.forEach((params) => {
     segmentTests(false, params);
     segmentTests(true, params);
-    //     segmentVotingVaultTests(params);
+    segmentVotingVaultTests(params);
   });
   segmentErrorTests(true);
   segmentErrorTests(false);

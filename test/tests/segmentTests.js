@@ -210,7 +210,7 @@ const segmentTests = (voting, params) => {
     expect(plan3.rate).to.eq(calcPlanRate);
   });
   it('segments the plan into 5 equal chunk sizes, and combines 2 and 5 together', async () => {
-    segmentAmount = amount.div(5)
+    segmentAmount = amount.div(5);
     await hedgey.createPlan(c.address, token.address, amount, start, cliff, rate, period);
     // created plan #6
     await hedgey.connect(c).segmentPlan('6', [segmentAmount, segmentAmount, segmentAmount, segmentAmount]);
@@ -259,6 +259,57 @@ const segmentTests = (voting, params) => {
     const calcCombinedRate = C.calcCombinedRate(plan8amount, plan9amount, plan8rate, plan9rate, start, end, period);
     expect(plan8.rate).to.eq(calcCombinedRate);
   });
+  it('combines two plans not from same parent with exact same parameters', async () => {
+    const tx1 = await hedgey.createPlan(d.address, token.address, amount, start, cliff, rate, period);
+    const tx2 = await hedgey.createPlan(d.address, token.address, amount, start, cliff, rate, period);
+    const tx1Events = (await tx1.wait()).events;
+    const tx2Events = (await tx2.wait()).events;
+    const plan1Id = tx1Events[tx1Events.length - 1].args.id;
+    const plan2Id = tx2Events[tx2Events.length - 1].args.id;
+    const end = tx1Events[tx1Events.length - 1].args.end;
+    const calcRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
+    expect(await hedgey.connect(d).combinePlans(plan1Id, plan2Id))
+      .to.emit('PlansCombined')
+      .withArgs(plan1Id, plan2Id, plan1Id, amount.add(amount), calcRate, start, cliff, period, end);
+    const combinedPlan = await hedgey.plans(plan1Id);
+    const combinedEnd = await hedgey.planEnd(plan1Id);
+    expect(combinedEnd).to.eq(end);
+    expect(combinedPlan.amount).to.eq(amount.mul(2));
+    expect(combinedPlan.start).to.eq(start);
+    expect(combinedPlan.cliff).to.eq(cliff);
+    expect(combinedPlan.period).to.eq(period);
+    expect(combinedPlan.rate).to.eq(calcRate);
+  });
+  it('combines two plans not from same parent with similar params except amount and rate', async () => {
+    let now = BigNumber.from(await time.latest());
+    start = now.add(params.start);
+    cliff = start;
+    const amountA = C.E18_1000;
+    const amountB = C.E18_1000.mul(3);
+    const rateA = C.E18_1000.div(365);
+    const rateB = C.E18_1000.mul(3).div(365);
+    const tx1 = await hedgey.createPlan(d.address, token.address, amountA, start, cliff, rateA, period);
+    const tx2 = await hedgey.createPlan(d.address, token.address, amountB, start, cliff, rateB, period);
+    const tx1Events = (await tx1.wait()).events;
+    const tx2Events = (await tx2.wait()).events;
+    const end = tx1Events[tx1Events.length - 1].args.end;
+    const end2 = tx2Events[tx2Events.length - 1].args.end;
+    expect(end).to.eq(end2);
+    const plan1Id = tx1Events[tx1Events.length - 1].args.id;
+    const plan2Id = tx2Events[tx2Events.length - 1].args.id;
+    const calcRate = C.calcCombinedRate(amountA, amountB, rateA, rateB, start, end, period);
+    expect(await hedgey.connect(d).combinePlans(plan1Id, plan2Id))
+      .to.emit('PlansCombined')
+      .withArgs(plan1Id, plan2Id, plan1Id, amountA.add(amountB), calcRate, start, cliff, period, end);
+    const combinedPlan = await hedgey.plans(plan1Id);
+    const combinedEnd = await hedgey.planEnd(plan1Id);
+    expect(combinedEnd).to.eq(end);
+    expect(combinedPlan.amount).to.eq(amountA.add(amountB));
+    expect(combinedPlan.start).to.eq(start);
+    expect(combinedPlan.cliff).to.eq(cliff);
+    expect(combinedPlan.period).to.eq(period);
+    expect(combinedPlan.rate).to.eq(calcRate);
+  });
 };
 
 const segmentVotingVaultTests = (params) => {
@@ -274,16 +325,116 @@ const segmentVotingVaultTests = (params) => {
     c = s.c;
     d = s.d;
     token = s.token;
-    await token.approve(hedgey.address, C.E18_1000000);
-    let now = await time.latest();
-    
+    await token.approve(hedgey.address, C.E18_1000000.mul(10000));
+    let now = BigNumber.from(await time.latest());
+    start = now.add(params.start);
+    cliff = start.add(params.cliff);
+    amount = params.amount;
+    segmentAmount = params.segmentAmount;
+    period = params.period;
+    rate = params.rate;
+    end = C.planEnd(start, amount, rate, period);
+    await hedgey.createPlan(admin.address, token.address, amount, start, cliff, rate, period);
+    expect(await hedgey.setupVoting('1')).to.emit('VotingVaultCreated');
+    vaultAddress = await hedgey.votingVaults('1');
+    expect(await token.balanceOf(vaultAddress)).to.eq(amount);
+    await hedgey.segmentPlan('1', [segmentAmount]);
+    segmentVault = await hedgey.votingVaults('2');
+    expect(await token.balanceOf(segmentVault)).to.eq(segmentAmount);
+    expect(await token.balanceOf(vaultAddress)).to.eq(amount.sub(segmentAmount));
+    const plan1 = await hedgey.plans('1');
+    const plan2 = await hedgey.plans('2');
+    expect(plan1.amount).to.eq(amount.sub(segmentAmount));
+    expect(plan2.amount).to.eq(segmentAmount);
+    expect(plan1.start).to.eq(start);
+    expect(plan2.start).to.eq(start);
+    expect(plan1.period).to.eq(period);
+    expect(plan2.period).to.eq(period);
+    expect(plan1.cliff).to.eq(cliff);
+    expect(plan2.cliff).to.eq(cliff);
+    expect(plan1.token).to.eq(token.address);
+    expect(plan2.token).to.eq(token.address);
+    expect((await hedgey.ownerOf('1'))).to.eq(admin.address);
+    expect((await hedgey.ownerOf('2'))).to.eq(admin.address);
+    expect((await hedgey.balanceOf(admin.address))).to.eq(2);
+    planRate = C.proratePlanRate(amount, amount.sub(segmentAmount), rate);
+    expect(plan1.rate).to.eq(planRate);
+    segmentRate = C.calcPlanRate(segmentAmount, period, end, start, rate, planRate);
+    expect(plan2.rate).to.eq(segmentRate);
+    planEnd = C.planEnd(start, amount.sub(segmentAmount), planRate, period);
+    segmentEnd = C.planEnd(start, segmentAmount, segmentRate, period);
+    expect((await hedgey.planEnd('1'))).to.eq(planEnd);
+    expect((await hedgey.planEnd('2'))).to.eq(segmentEnd);
+    expect(planEnd.gte(end)).to.eq(true);
+    expect(segmentEnd.gte(end)).to.eq(true);
   });
-  it('combines the two plans', async () => {
-   
+  it('combines the two plans with voting vaults', async () => {
+    await hedgey.combinePlans('1', '2');
+    expect(await token.balanceOf(vaultAddress)).to.eq(amount);
+    expect(await token.balanceOf(segmentVault)).to.eq(0);
+    await expect(hedgey.ownerOf('2')).to.be.reverted;
+    expect(await hedgey.balanceOf(admin.address)).to.eq(1);
+    const plan = await hedgey.plans('1');
+    expect(plan.amount).to.eq(amount);
+    expect(plan.start).to.eq(start);
+    expect(plan.cliff).to.eq(cliff);
+    expect(plan.period).to.eq(period);
+    planRate = C.calcCombinedRate(amount.sub(segmentAmount), segmentAmount, planRate, segmentRate, start, planEnd, period);
+    expect(plan.rate).to.eq(planRate);
+    planEnd = C.planEnd(start, amount, planRate, period);
+    expect(await hedgey.planEnd('1')).to.eq(planEnd);
+    await time.increaseTo(planEnd);
+    expect(await hedgey.redeemPlans(['1'])).to.emit('PlanRedeemed').withArgs('1', amount, 0, planEnd);
+    expect(await token.balanceOf(vaultAddress)).to.eq(0);
   });
   it('creates two same plans, only one sets up voting, then combines them', async () => {
+    let now = BigNumber.from(await time.latest());
+    start = now.add(params.start);
+    cliff = start.add(params.cliff);
+    end = C.planEnd(start, amount, rate, period);
+    await hedgey.createPlan(admin.address, token.address, amount, start, cliff, rate, period);
+    await hedgey.createPlan(admin.address, token.address, amount, start, cliff, rate, period);
+    // setup with the plan0 first
+    await hedgey.setupVoting('3');
+    vaultAddress = await hedgey.votingVaults('3');
+    expect(await token.balanceOf(vaultAddress)).to.eq(amount);
+    await hedgey.combinePlans('3', '4');
+    expect(await token.balanceOf(vaultAddress)).to.eq(amount.mul(2));
+    await expect(hedgey.ownerOf('4')).to.be.reverted;
+    const plan3 = await hedgey.plans('3')
+    const combinedRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
+    const combinedEnd = C.planEnd(start, amount.mul(2), combinedRate, period);
+    expect(plan3.amount).to.eq(amount.mul(2));
+    expect(plan3.start).to.eq(start);
+    expect(plan3.cliff).to.eq(cliff);
+    expect(plan3.period).to.eq(period);
+    expect(plan3.rate).to.eq(combinedRate);
+    expect(await hedgey.planEnd('3')).to.eq(combinedEnd);
     
-  })
+      // testing with 5 and 6
+    await hedgey.createPlan(admin.address, token.address, amount, start, cliff, rate, period);
+    await hedgey.createPlan(admin.address, token.address, amount, start, cliff, rate, period);
+    await hedgey.setupVoting('6');
+    await hedgey.combinePlans('5', '6');
+    //expecitng 6 to be the survivor
+    await expect(hedgey.ownerOf('5')).to.be.reverted;
+    const plan5 = await hedgey.plans('5');
+    expect(plan5.amount).to.eq(0);
+    expect(plan5.rate).to.eq(0);
+    expect(plan5.start).to.eq(0);
+    expect(plan5.cliff).to.eq(0);
+    expect(plan5.period).to.eq(0);
+    const vault6address = await hedgey.votingVaults('6');
+    expect(await token.balanceOf(vault6address)).to.eq(amount.mul(2));
+    expect(await hedgey.ownerOf('6')).to.eq(admin.address);
+    const plan6 = await hedgey.plans('6');
+    expect(plan6.amount).to.eq(amount.mul(2));
+    expect(plan6.start).to.eq(start);
+    expect(plan6.cliff).to.eq(cliff);
+    expect(plan6.period).to.eq(period);
+    expect(plan6.rate).to.eq(combinedRate);
+    expect(await hedgey.planEnd('6')).to.eq(combinedEnd);
+  });
 };
 
 const segmentErrorTests = (voting) => {
