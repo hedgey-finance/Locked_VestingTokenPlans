@@ -19,7 +19,7 @@ const createTests = (vesting, voting, params) => {
     a = s.a;
     b = s.b;
     token = s.token;
-    await token.approve(hedgey.address, C.E18_1000000);
+    await token.approve(hedgey.address, C.E18_1000000.mul(10000));
     let now = await time.latest();
     amount = params.amount;
     period = params.period;

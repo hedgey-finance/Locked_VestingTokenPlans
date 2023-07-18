@@ -25,8 +25,8 @@ module.exports = (vesting, voting, params) => {
     amount = params.amount;
     period = params.period;
     rate = params.rate;
-    start = params.start.add(now);
-    cliff = params.cliff.add(start);
+    start = BigNumber.from(now).add(params.start);
+    cliff = BigNumber.from(start).add(params.cliff);
     end = C.planEnd(start, amount, rate, period);
     if (vesting) {
       expect(
