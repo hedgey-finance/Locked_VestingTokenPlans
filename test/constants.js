@@ -34,8 +34,37 @@ const planEnd = (start, amount, rate, period) => {
   return end;
 };
 
+const calcPlanRate = (amount, period, end, start, originalRate, planRate) => {
+  const numerator = BigNumber.from(period).mul(amount);
+  let rateModCheck = BigNumber.from(originalRate).sub(planRate);
+  let denominator = BigNumber.from(end).sub(start);
+  if (amount.mod(rateModCheck) != 0) {
+    denominator = denominator.sub(period);
+  }
+  return numerator.div(denominator);
+}
+
+const proratePlanRate = (originalAmount, planAmount, rate) => {
+  const multiplier = BigNumber.from(10).pow(18);
+  let amount = BigNumber.from(planAmount).mul(multiplier);
+  let prorataAmount = amount.div(originalAmount);
+  prorataAmount = prorataAmount.mul(rate);
+  return prorataAmount.div(multiplier);
+}
+
+const calcCombinedRate = (amountA, amountB, rateA, rateB, start, end, period) => {
+  const amount = BigNumber.from(amountA).add(amountB);
+  const numerator = amount.mul(period);
+  const combinedRate = BigNumber.from(rateA).add(rateB);
+  let denominator = BigNumber.from(end).sub(start);
+  if (amount.mod(combinedRate) != 0) {
+    denominator = denominator.sub(period);
+  }
+  return numerator.div(denominator);
+};
+
 const totalPeriods = (rate, amount) => {
-  return amount / rate;
+  return BigNumber.from(amount).div(rate);
 };
 
 const balanceAtTime = (start, cliff, amount, rate, period, timestamp, redeemTime) => {
@@ -102,4 +131,7 @@ module.exports = {
   planEnd,
   totalPeriods,
   balanceAtTime,
+  calcPlanRate,
+  proratePlanRate,
+  calcCombinedRate,
 };

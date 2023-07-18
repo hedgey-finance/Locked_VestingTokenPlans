@@ -206,6 +206,25 @@ const revokeTests = (voting, params) => {
       .withArgs('12', d.address);
     await hedgey.connect(d).revokePlans(['12']);
   });
+  it('revokes a plan in the future', async () => {
+    let now = BigNumber.from(await time.latest());
+    start = now;
+    cliff = start;
+    await hedgey.createPlan(d.address, token.address, amount, start, cliff, rate, period, admin.address, true);
+    // plan 13
+    await time.increase(period.mul(5));
+    now = BigNumber.from(await time.latest());
+    const balanceCheck = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(period));
+    await hedgey.futureRevokePlans(['14'], now.add(period)).to.emit('PlanRevoked').withArgs('13', balanceCheck.balance, balanceCheck.remainder);
+  });
+  it('revokes a plan before it has started', async () => {
+    let now = BigNumber.from(await time.latest());
+    start = now.add(C.WEEK);
+    cliff = start.add(params.cliff);
+    await hedgey.createPlan(d.address, token.address, amount, start, cliff, rate, period, admin.address, true);
+    // plan 14
+    await hedgey.revokePlans(['14']).to.emit('PlanRevoked').withArgs('14', 0, amount);
+  })
 };
 
 const revokeErrorTests = (voting) => {

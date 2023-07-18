@@ -13,16 +13,16 @@ import '../sharedContracts/LockupStorage.sol';
 
 /// @title TokenLockupPlans - An efficient way to allocate tokens to beneficiaries that unlock over time
 /// @notice This contract allows people to grant tokens to beneficiaries that unlock over time with the added functionalities;
-/// Owners of unlock plans can manage all of their token unlocks across all of their positions in a single contract. 
-/// Each lockup plan is a unique NFT, leveraging the backbone of the ERC721 contract to represent a unique lockup plan 
-/// 1. Not-Revokable: plans cannot be revoked, once granted the entire amount will be claimable by the beneficiary over time. 
-/// 2. Transferable: Lockup plans can be transferred by the owner - opening up defi opportunities like NFT sales, borrowing and lending, and many others. 
+/// Owners of unlock plans can manage all of their token unlocks across all of their positions in a single contract.
+/// Each lockup plan is a unique NFT, leveraging the backbone of the ERC721 contract to represent a unique lockup plan
+/// 1. Not-Revokable: plans cannot be revoked, once granted the entire amount will be claimable by the beneficiary over time.
+/// 2. Transferable: Lockup plans can be transferred by the owner - opening up defi opportunities like NFT sales, borrowing and lending, and many others.
 /// 3. Governance optimized for on-chain voting: These are built to allow beneficiaries to vote with their unvested tokens on chain with the standard ERC20Votes contract, as well as on snapshot
 /// 4. Beneficiary Claims: Beneficiaries get to choose when to claim their tokens, and can claim partial amounts that are less than the amount they have unlocked for tax optimization
 /// 5. Segmenting plans: Beneficiaries can segment a single lockup into  smaller chunks for subdelegation of tokens, or to use in defi with smaller chunks
 /// 6. Combingin Plans: Beneficiaries can combine plans that have the same details in one larger chunk for easier bulk management
 contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGuard, URIAdmin {
-    /// @notice uses counters for incrementing token IDs which are the planIds
+  /// @notice uses counters for incrementing token IDs which are the planIds
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
 
@@ -43,7 +43,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
 
   /****CORE EXTERNAL FUNCTIONS*********************************************************************************************************************************************/
 
-  /// @notice function to create a lockup plan. 
+  /// @notice function to create a lockup plan.
   /// @dev this function will pull the tokens into this contract for escrow, increment the planIds, mint an NFT to the recipient, and create the storage Plan and map it to the newly minted NFT token ID in storage
   /// @param recipient the address of the recipient and beneficiary of the plan
   /// @param token the address of the ERC20 token
@@ -51,7 +51,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   /// @param start the start date of the lockup plan, unix time
   /// @param cliff a cliff date which is a discrete date where tokens are not unlocked until this date, and then vest in a large single chunk on the cliff date
   /// @param rate the amount of tokens that vest in a single period
-  /// @param period the amount of time in between each unlock time stamp, in seconds. A period of 1 means that tokens vest every second in a 'streaming' style. 
+  /// @param period the amount of time in between each unlock time stamp, in seconds. A period of 1 means that tokens vest every second in a 'streaming' style.
   function createPlan(
     address recipient,
     address token,
@@ -76,7 +76,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   /// @notice function for a beneficiary to redeem unlocked tokens from a group of plans
   /// @dev this will call an internal function for processing the actual redemption of tokens, which will withdraw unlocked tokens and deliver them to the beneficiary
   /// @dev this function will redeem all claimable and unlocked tokens up to the current block.timestamp
-  /// @param planIds is the array of the NFT planIds that are to be redeemed. If any have no redeemable balance they will be skipped. 
+  /// @param planIds is the array of the NFT planIds that are to be redeemed. If any have no redeemable balance they will be skipped.
   function redeemPlans(uint256[] memory planIds) external nonReentrant {
     _redeemPlans(planIds, block.timestamp);
   }
@@ -103,9 +103,9 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     _redeemPlans(planIds, block.timestamp);
   }
 
-  /// @notice function for an owner of a lockup plan to segment a single plan into multiple chunks; segments. 
+  /// @notice function for an owner of a lockup plan to segment a single plan into multiple chunks; segments.
   /// @dev the single plan can be divided up into many segments in this transaction, but care must be taken to ensure that the array is processed in a proper order
-  /// if the tokens are send in the wrong order the function will revert becuase the amount of the segment could be larger than the original plan. 
+  /// if the tokens are send in the wrong order the function will revert becuase the amount of the segment could be larger than the original plan.
   /// this function iterates through the segment amounts and breaks up the same original plan into smaller sizes
   /// each time a segment happens it is always with the single planId, which will generate a new NFT for each new segment, and the original plan is updated in storage
   /// the original plan amount newPlanAmount + segmentAmount && original plan Rate = newPlanRate + segmentRate
@@ -129,7 +129,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   /// if the plan has a Voting Vault, it will create a new voting vault for each segment, and then delegate the tokens in the voting vault to the delegatee address
   /// @param planId is the plan that will be segmented (and not delegated)
   /// @param segmentAmounts is the array of each segment amount
-  /// @param delegatees is the array of delegatees that each new segment will be delegated to 
+  /// @param delegatees is the array of delegatees that each new segment will be delegated to
   function segmentAndDelegatePlans(
     uint256 planId,
     uint256[] memory segmentAmounts,
@@ -154,9 +154,9 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   }
 
   /****EXTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/
-  /// @notice functions for the owners of lockup plans to setup on chain voting vaults, and then delegate those tokens. 
-  /// these are explicity for tokens that are of the ERC20Votes format, which have a delegate and delegates function. 
-  /// tokens that do not have the standard delegate and delegates functionality for on-chain voting will revert when delegating or creating onchain voting vaults. 
+  /// @notice functions for the owners of lockup plans to setup on chain voting vaults, and then delegate those tokens.
+  /// these are explicity for tokens that are of the ERC20Votes format, which have a delegate and delegates function.
+  /// tokens that do not have the standard delegate and delegates functionality for on-chain voting will revert when delegating or creating onchain voting vaults.
 
   /// @notice function to setup a voting vault, this calls an internal voting function to set it up
   // this will physically transfer tokens to the new voting vault contract once deployed
@@ -173,7 +173,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     _delegate(msg.sender, planId, delegatee);
   }
 
- /// @notice this function allows an owner of multiple lockup plans to delegate multiple of them in a single transaction, each planId corresponding to a delegatee address
+  /// @notice this function allows an owner of multiple lockup plans to delegate multiple of them in a single transaction, each planId corresponding to a delegatee address
   /// @param planIds is the ids of the lockup plan and NFT
   /// @param delegatees is the array of addresses where each lockup plan will delegate the tokens to
   function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
@@ -215,14 +215,14 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
 
   /// @notice internal function that process the redemption for a single lockup plan
   /// @dev this takes the inputs from the _redeemPlans and processes the redemption delivering the available balance of redeemable tokens to the beneficiary
-  /// if the plan has a voting vault then tokens will be redeemed and transferred from the voting vault to the beneficiary. 
+  /// if the plan has a voting vault then tokens will be redeemed and transferred from the voting vault to the beneficiary.
   /// if the plan is fully redeemed, as defined that the balance == amount, then the plan is deleted and NFT burned
   // if the plan is not fully redeemed, then the storage of start and amount are updated to reflect the remaining amount and most recent time redeemed for the new start date
   /// @param holder is the address of the holder of the plan and NFT
   /// @param planId is the id of the lockup plan and NFT
   /// @param balance is the available redeemable balance
   /// @param remainder is the amount of tokens that are still lcoked in the plan, and will be the new amount in the plan storage
-  /// @param latestUnlock is the most recent timestamp for when redemption occured. Because periods may be longer than 1 second, 
+  /// @param latestUnlock is the most recent timestamp for when redemption occured. Because periods may be longer than 1 second,
   /// the latestUnlock time may be the current block time, or the timestamp of the most recent period timestamp
   function _redeemPlan(
     address holder,
@@ -250,17 +250,17 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     emit PlanRedeemed(planId, balance, remainder, latestUnlock);
   }
 
-  /// @notice the internal function for segmenting a single plan into two 
+  /// @notice the internal function for segmenting a single plan into two
   /// @dev the function takes a plan, performs some checks that the segment amount cannot be 0 and must be strictly less than the original plan amount
   /// then it will subtract the segmentamount from the original plan amount to get the new plan amount
   /// then it will get a new pro-rata rate for the newplan based on the new plan amount divided by the original plan amount
   /// while this pro-rata new rate is not perfect because of unitization (ie no decimal suppport), the segment rate is calculated by subtracting the new plan rate from the original plan rate
   /// because the newplan amount and segment amount == original plan amount, and the new plan rate + segment rate == original plan rate, the beneficiary will still unlock the same number of tokens at approximatley the same rate
   /// however because of uneven division, the end dates of each of the new rates may be different than the original rate. We check to make sure that the new end is farther than the original end
-  /// so that tokens do not unlock early, and then it is a valid segment. 
+  /// so that tokens do not unlock early, and then it is a valid segment.
   /// finally a new NFT is minted with the Segment plan details
-  /// and the storage of the original plan amount and rate is updated with the newplan amount and rate. 
-  /// at the end this checks if there is a voting vault setup for the original plan. If there is a voting vault setup, it will transfer tokens back from the original plan vault, 
+  /// and the storage of the original plan amount and rate is updated with the newplan amount and rate.
+  /// at the end this checks if there is a voting vault setup for the original plan. If there is a voting vault setup, it will transfer tokens back from the original plan vault,
   /// then setup a new voting vault for the segment plan, thereby transferring the segment tokens to the new segment voting vault
   /// @param holder is the owner of the lockup plan and NFT
   /// @param planId is the id of the lockup plan
@@ -274,25 +274,17 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     _planIds.increment();
     newPlanId = _planIds.current();
     uint256 planAmount = plan.amount - segmentAmount;
-    uint256 planRate = (plan.rate * ((planAmount * (10 ** 18)) / plan.amount)) / (10 ** 18);
-    uint256 segmentRate = (segmentAmount % (plan.rate - planRate) == 0)
-      ? (plan.period * segmentAmount) / (end - plan.start)
-      : (plan.period * segmentAmount) / (end - plan.start - plan.period);
-    (uint256 planEnd, bool validPlan) = TimelockLibrary.validateEnd(
-      plan.start,
-      plan.cliff,
-      planAmount,
-      planRate,
-      plan.period
-    );
-    (uint256 segmentEnd, bool validSegment) = TimelockLibrary.validateEnd(
-      plan.start,
-      plan.cliff,
-      segmentAmount,
-      segmentRate,
-      plan.period
-    );
-    require(validPlan && validSegment, 'invalid new plans');
+    (uint256 planRate, uint256 segmentRate, uint256 planEnd, uint256 segmentEnd) = TimelockLibrary
+      .calculateSegmentRates(
+        plan.rate,
+        plan.amount,
+        planAmount,
+        segmentAmount,
+        plan.start,
+        end,
+        plan.period,
+        plan.cliff
+      );
     uint256 endCheck = segmentOriginalEnd[planId] == 0 ? end : segmentOriginalEnd[planId];
     require(planEnd >= endCheck, 'plan end error');
     require(segmentEnd >= endCheck, 'segmentEnd error');
@@ -327,15 +319,15 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
 
   /// @notice this funtion allows the holder of two plans that have the same parameters to combine them into a single surviving plan
   /// @dev all of the details of the plans must be the same except the amounts and rates may be different
-  /// this function will check that the owners are the same, the ERC20 tokens are the same, the start, cliff and periods are the same. 
+  /// this function will check that the owners are the same, the ERC20 tokens are the same, the start, cliff and periods are the same.
   /// then it performs some checks on the end dates to ensure that either the end dates are the same, or if the user is combining previously segmented plans,
-  /// that the original end dates of those segments are the same. 
+  /// that the original end dates of those segments are the same.
   /// if everything checks out, and the new end date of the combined plan will result in an end date equal to or later than the two plans, then they can be combined
   /// combining plans will delete the plan1 and burn the NFT related to it
   /// and then update the storage of the plan0 with the combined amount and combined rate
   /// if One of the plans has a voting vault, then that plan will be the survivor and then tokens will be transferred and consolidated into that plan
   /// if both have a voting vault, then plan0 will be the survivor and tokens consolidated to plan0 voting vault
-  /// if neither have a voting vault then nothing is done for voting vaults. 
+  /// if neither have a voting vault then nothing is done for voting vaults.
   /// @param holder is the owner of both lockup plans
   /// @param planId0 is the planId of the first plan in the combination
   /// @param planId1 is the planId of a second plan to be combined
@@ -350,16 +342,29 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     require(plan0.period == plan1.period, 'period error');
     uint256 plan0End = TimelockLibrary.endDate(plan0.start, plan0.amount, plan0.rate, plan0.period);
     uint256 plan1End = TimelockLibrary.endDate(plan1.start, plan1.amount, plan1.rate, plan1.period);
-    require(plan0End == plan1End || (segmentOriginalEnd[planId0] == segmentOriginalEnd[planId1] && segmentOriginalEnd[planId0] != 0), 'end error');
+    require(
+      plan0End == plan1End ||
+        (segmentOriginalEnd[planId0] == segmentOriginalEnd[planId1] && segmentOriginalEnd[planId0] != 0),
+      'end error'
+    );
     address vault0 = votingVaults[planId0];
     address vault1 = votingVaults[planId1];
     survivingPlan = planId0;
     if (vault0 != address(0)) {
       plans[planId0].amount += plans[planId1].amount;
-      plans[planId0].rate += plans[planId1].rate;
-      uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
-      if (end < plan0End) {
-        require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+      (uint256 survivorRate, uint256 survivorEnd) = TimelockLibrary.calculateCombinedRate(
+        plan0.amount + plan1.amount,
+        plan0.rate + plan1.rate,
+        plan0.start,
+        plan0.period,
+        plan0End
+      );
+      plans[planId0].rate = survivorRate;
+      if (survivorEnd < plan0End) {
+        require(
+          survivorEnd == segmentOriginalEnd[planId0] || survivorEnd == segmentOriginalEnd[planId1],
+          'original end error'
+        );
       }
       if (vault1 != address(0)) {
         VotingVault(vault1).withdrawTokens(vault0, plan1.amount);
@@ -377,14 +382,23 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
         plan0.start,
         plan0.cliff,
         plan0.period,
-        end
+        survivorEnd
       );
     } else if (vault1 != address(0)) {
       plans[planId1].amount += plans[planId0].amount;
-      plans[planId1].rate += plans[planId0].rate;
-      uint256 end = TimelockLibrary.endDate(plan1.start, plans[planId1].amount, plans[planId1].rate, plan1.period);
-      if (end < plan1End) {
-        require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+      (uint256 survivorRate, uint256 survivorEnd) = TimelockLibrary.calculateCombinedRate(
+        plan0.amount + plan1.amount,
+        plan0.rate + plan1.rate,
+        plan1.start,
+        plan1.period,
+        plan1End
+      );
+      plans[planId1].rate = survivorRate;
+      if (survivorEnd < plan1End) {
+        require(
+          survivorEnd == segmentOriginalEnd[planId0] || survivorEnd == segmentOriginalEnd[planId1],
+          'original end error'
+        );
       }
       TransferHelper.withdrawTokens(plan0.token, vault1, plan0.amount);
       survivingPlan = planId1;
@@ -399,14 +413,23 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
         plan1.start,
         plan1.cliff,
         plan1.period,
-        end
+        survivorEnd
       );
     } else {
       plans[planId0].amount += plans[planId1].amount;
-      plans[planId0].rate += plans[planId1].rate;
-      uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
-      if (end < plan0End) {
-        require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+      (uint256 survivorRate, uint256 survivorEnd) = TimelockLibrary.calculateCombinedRate(
+        plan0.amount + plan1.amount,
+        plan0.rate + plan1.rate,
+        plan0.start,
+        plan0.period,
+        plan0End
+      );
+      plans[planId0].rate = survivorRate;
+      if (survivorEnd < plan0End) {
+        require(
+          survivorEnd == segmentOriginalEnd[planId0] || survivorEnd == segmentOriginalEnd[planId1],
+          'original end error'
+        );
       }
       delete plans[planId1];
       _burn(planId1);
@@ -419,16 +442,14 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
         plan0.start,
         plan0.cliff,
         plan0.period,
-        end
+        survivorEnd
       );
     }
   }
 
-  
-
   /****INTERNAL VOTING & DELEGATION FUNCTIONS*********************************************************************************************************************************************/
 
-  /// @notice the internal function to setup a voting vault. 
+  /// @notice the internal function to setup a voting vault.
   /// @dev this will check that no voting vault exists already and then deploy a new voting vault contract
   // during the constructor setup of the voting vault, it will auto delegate the voting vault address to whatever the existing delegate of the  plan holder has delegated to
   // if it has not delegated yet, it will self-delegate the tokens
@@ -464,7 +485,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   /****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   /// @notice this function will pull all of the unclaimed tokens for a specific holder across all of their plans, based on a single ERC20 token
-  /// very useful for snapshot voting, and other view functionalities. This aggregates all balances, including any in voting vaults. 
+  /// very useful for snapshot voting, and other view functionalities. This aggregates all balances, including any in voting vaults.
   /// @param holder is the address of the beneficiary who owns the lockup plan(s)
   /// @param token is the ERC20 address of the token that is stored across the lockup plans
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {

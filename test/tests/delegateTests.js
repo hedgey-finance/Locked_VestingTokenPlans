@@ -25,8 +25,8 @@ module.exports = (vesting, params) => {
     amount = params.amount;
     period = params.period;
     rate = params.rate;
-    start = now.add(params.start);
-    cliff = start.add(params.cliff);
+    start = BigNumber.from(now).add(params.start);
+    cliff = BigNumber.from(start).add(params.cliff);
     end = C.planEnd(start, amount, rate, period);
     vesting
       ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)

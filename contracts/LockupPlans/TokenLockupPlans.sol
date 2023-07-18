@@ -250,25 +250,17 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     _planIds.increment();
     newPlanId = _planIds.current();
     uint256 planAmount = plan.amount - segmentAmount;
-    uint256 planRate = (plan.rate * ((planAmount * (10 ** 18)) / plan.amount)) / (10 ** 18);
-    uint256 segmentRate = (segmentAmount % (plan.rate - planRate) == 0)
-      ? (plan.period * segmentAmount) / (end - plan.start)
-      : (plan.period * segmentAmount) / (end - plan.start - plan.period);
-    (uint256 planEnd, bool validPlan) = TimelockLibrary.validateEnd(
-      plan.start,
-      plan.cliff,
-      planAmount,
-      planRate,
-      plan.period
-    );
-    (uint256 segmentEnd, bool validSegment) = TimelockLibrary.validateEnd(
-      plan.start,
-      plan.cliff,
-      segmentAmount,
-      segmentRate,
-      plan.period
-    );
-    require(validPlan && validSegment, 'invalid new plans');
+    (uint256 planRate, uint256 segmentRate, uint256 planEnd, uint256 segmentEnd) = TimelockLibrary
+      .calculateSegmentRates(
+        plan.rate,
+        plan.amount,
+        planAmount,
+        segmentAmount,
+        plan.start,
+        end,
+        plan.period,
+        plan.cliff
+      );
     uint256 endCheck = segmentOriginalEnd[planId] == 0 ? end : segmentOriginalEnd[planId];
     require(planEnd >= endCheck, 'plan end error');
     require(segmentEnd >= endCheck, 'segmentEnd error');
@@ -325,10 +317,19 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
       'end error'
     );
     plans[planId0].amount += plans[planId1].amount;
-    plans[planId0].rate += plans[planId1].rate;
-    uint256 end = TimelockLibrary.endDate(plan0.start, plans[planId0].amount, plans[planId0].rate, plan0.period);
-    if (end < plan0End) {
-      require(end == segmentOriginalEnd[planId0] || end == segmentOriginalEnd[planId1], 'original end error');
+    (uint256 survivorRate, uint256 survivorEnd) = TimelockLibrary.calculateCombinedRate(
+      plan0.amount + plan1.amount,
+      plan0.rate + plan1.rate,
+      plan0.start,
+      plan0.period,
+      plan0End
+    );
+    plans[planId0].rate = survivorRate;
+    if (survivorEnd < plan0End) {
+      require(
+        survivorEnd == segmentOriginalEnd[planId0] || survivorEnd == segmentOriginalEnd[planId1],
+        'original end error'
+      );
     }
     delete plans[planId1];
     _burn(planId1);
@@ -338,11 +339,11 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
       planId1,
       survivingPlan,
       plans[planId0].amount,
-      plans[planId0].rate,
+      survivorRate,
       plan0.start,
       plan0.cliff,
       plan0.period,
-      end
+      survivorEnd
     );
   }
 

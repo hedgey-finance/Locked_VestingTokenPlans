@@ -19,15 +19,15 @@ const votingVaultTests = (vesting, params) => {
     token = s.token;
     dai = s.dai;
     usdc = s.usdc;
-    await token.approve(hedgey.address, C.E18_1000000);
-    await dai.approve(hedgey.address, C.E18_1000000);
-    await usdc.approve(hedgey.address, C.E18_1000000);
+    await token.approve(hedgey.address, C.E18_1000000.mul(10000));
+    await dai.approve(hedgey.address, C.E18_1000000.mul(10000));
+    await usdc.approve(hedgey.address, C.E18_1000000.mul(10000));
     let now = BigNumber.from(await time.latest());
     amount = params.amount;
     period = params.period;
     rate = params.rate;
-    start = now.add(params.start);
-    cliff = start.add(params.cliff);
+    start = BigNumber.from(now).add(params.start);
+    cliff = BigNumber.from(start).add(params.cliff);
     end = C.planEnd(start, amount, rate, period);
     vesting
       ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)
