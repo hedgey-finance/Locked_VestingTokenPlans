@@ -22,9 +22,6 @@ abstract contract ERC721Delegate is ERC721, IERC721Delegate {
 
   // Mapping from token id to position in the allTokens array
   mapping(uint256 => uint256) private _allTokensIndex;
-  
-  // Mapping if a token has been transferred
-  mapping(uint256 => bool) public wasTransferred;
 
   /**
    * @dev See {IERC165-supportsInterface}.
@@ -87,7 +84,6 @@ abstract contract ERC721Delegate is ERC721, IERC721Delegate {
       _removeTokenFromOwnerEnumeration(from, tokenId);
       if (to != address(0)) {
         _transferDelegate(to, tokenId);
-        wasTransferred[tokenId] = true;
       }
     }
     if (to == address(0)) {
