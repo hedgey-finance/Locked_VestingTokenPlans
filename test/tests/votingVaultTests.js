@@ -113,7 +113,7 @@ const votingVaultTests = (vesting, params) => {
     it('segements and delegates voting vault with no voting vault setup for original plan', async () => {
         let _s = await setup();
         let locked = _s.voteLocked;
-        await token.approve(locked.address, C.E18_1000000);
+        await token.approve(locked.address, C.E18_1000000.mul(10000));
         await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
         expect(await token.balanceOf(locked.address)).to.eq(amount);
         let segment = amount.div(2);
@@ -128,7 +128,7 @@ const votingVaultTests = (vesting, params) => {
     it('segments and delegates voting vault with an original voting vault setup', async () => {
         let _s = await setup();
         let locked = _s.voteLocked;
-        await token.approve(locked.address, C.E18_1000000);
+        await token.approve(locked.address, C.E18_1000000.mul(10000));
         await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
         expect(await token.balanceOf(locked.address)).to.eq(amount);
         await locked.connect(a).setupVoting('1');
@@ -148,9 +148,10 @@ const votingVaultTests = (vesting, params) => {
     it('combines two plans, the first with a vault and the second without and delegates the tokens', async () => {
         let _s = await setup();
         let locked = _s.voteLocked;
-        await token.approve(locked.address, C.E18_1000000);
+        await token.approve(locked.address, C.E18_1000000.mul(10000));
         await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
         await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+        const end = C.planEnd(start, amount, rate, period);
         await locked.connect(a).setupVoting('1');
         const vv = await locked.votingVaults('1');
         expect(await token.balanceOf(vv)).to.eq(amount);
@@ -162,10 +163,12 @@ const votingVaultTests = (vesting, params) => {
         expect((await locked.plans('2')).period).to.eq(0);
         expect((await locked.plans('2')).cliff).to.eq(0);
         expect((await locked.plans('1')).amount).to.eq(amount.mul(2));
-        expect((await locked.plans('1')).rate).to.eq(rate.mul(2));
         expect((await locked.plans('1')).start).to.eq(start);
         expect((await locked.plans('1')).cliff).to.eq(cliff);
         expect((await locked.plans('1')).period).to.eq(period);
+        const calcRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
+        expect((await locked.plans('1')).rate).to.eq(calcRate);
+        expect((await locked.planEnd('1'))).to.eq(end);
         await locked.connect(a).delegate('1', b.address);
         expect(await token.delegates(vv)).to.eq(b.address);
     });
@@ -173,9 +176,10 @@ const votingVaultTests = (vesting, params) => {
         // expecting survivor to be 2
         let _s = await setup();
         let locked = _s.voteLocked;
-        await token.approve(locked.address, C.E18_1000000);
+        await token.approve(locked.address, C.E18_1000000.mul(10000));
         await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
         await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+        const end = C.planEnd(start, amount, rate, period);
         await locked.connect(a).setupVoting('2');
         const vv = await locked.votingVaults('2');
         expect(await token.balanceOf(vv)).to.eq(amount);
@@ -187,10 +191,12 @@ const votingVaultTests = (vesting, params) => {
         expect((await locked.plans('1')).period).to.eq(0);
         expect((await locked.plans('1')).cliff).to.eq(0);
         expect((await locked.plans('2')).amount).to.eq(amount.mul(2));
-        expect((await locked.plans('2')).rate).to.eq(rate.mul(2));
         expect((await locked.plans('2')).start).to.eq(start);
         expect((await locked.plans('2')).cliff).to.eq(cliff);
         expect((await locked.plans('2')).period).to.eq(period);
+        const calcRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
+        expect((await locked.plans('2')).rate).to.eq(calcRate);
+        expect((await locked.planEnd('2'))).to.eq(end);
         await locked.connect(a).delegate('2', b.address);
         expect(await token.delegates(vv)).to.eq(b.address);
     })
@@ -198,9 +204,10 @@ const votingVaultTests = (vesting, params) => {
         //expecting survivor to be 1
         let _s = await setup();
         let locked = _s.voteLocked;
-        await token.approve(locked.address, C.E18_1000000);
+        await token.approve(locked.address, C.E18_1000000.mul(10000));
         await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
         await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+        const end = C.planEnd(start, amount, rate, period);
         await locked.connect(a).setupVoting('1');
         await locked.connect(a).setupVoting('2');
         const vv = await locked.votingVaults('1');
@@ -216,7 +223,9 @@ const votingVaultTests = (vesting, params) => {
         expect((await locked.plans('2')).period).to.eq(0);
         expect((await locked.plans('2')).cliff).to.eq(0);
         expect((await locked.plans('1')).amount).to.eq(amount.mul(2));
-        expect((await locked.plans('1')).rate).to.eq(rate.mul(2));
+        const calcRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
+        expect((await locked.plans('1')).rate).to.eq(calcRate);
+        expect((await locked.planEnd('1'))).to.eq(end);
         expect((await locked.plans('1')).start).to.eq(start);
         expect((await locked.plans('1')).cliff).to.eq(cliff);
         expect((await locked.plans('1')).period).to.eq(period);

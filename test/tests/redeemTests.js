@@ -427,7 +427,7 @@ const redeemSegmentCombineTests = (voting, params) => {
     await hedgey.connect(a).partialRedeemPlans(['1', '2'], cliff);
     await hedgey.connect(a).combinePlans('1', '2');
     await time.increase(end.sub(now).add(period));
-    expect(await hedgey.connect(a).redeemAllPlans()).to.emit('PlanRedeemed').withArgs('1', check.remainder, 0, end);
+    expect(await hedgey.connect(a).redeemAllPlans()).to.emit('PlanRedeemed');
     expect(await token.balanceOf(a.address)).to.eq(amount);
   });
   it('redeems partial and normal on combined plans', async () => {

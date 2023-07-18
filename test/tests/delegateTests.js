@@ -18,9 +18,9 @@ module.exports = (vesting, params) => {
     token = s.token;
     dai = s.dai;
     usdc = s.usdc;
-    await token.approve(hedgey.address, C.E18_1000000);
-    await dai.approve(hedgey.address, C.E18_1000000);
-    await usdc.approve(hedgey.address, C.E18_1000000);
+    await token.approve(hedgey.address, C.E18_1000000.mul(1000));
+    await dai.approve(hedgey.address, C.E18_1000000.mul(1000));
+    await usdc.approve(hedgey.address, C.E18_1000000.mul(1000));
     let now = BigNumber.from(await time.latest());
     amount = params.amount;
     period = params.period;
