@@ -82,9 +82,9 @@ abstract contract ERC721Delegate is ERC721, IERC721Delegate {
       _addDelegate(to, tokenId);
     } else if (from != to) {
       _removeTokenFromOwnerEnumeration(from, tokenId);
-      if (to != address(0)) {
-        _transferDelegate(to, tokenId);
-      }
+      // if (to != address(0)) {
+      //   _transferDelegate(to, tokenId);
+      // }
     }
     if (to == address(0)) {
       _removeTokenFromAllTokensEnumeration(tokenId);
