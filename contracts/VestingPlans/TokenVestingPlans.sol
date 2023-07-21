@@ -114,13 +114,13 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /// @param planIds is the array of the plan ids to be redeemed. the caller must be the vesting admin for all of the plans.
   function revokePlans(uint256[] calldata planIds) external nonReentrant {
     for (uint256 i; i < planIds.length; i++) {
-      _revokePlan(msg.sender, planIds[i], block.timestamp);
+      _revokePlan(planIds[i], block.timestamp);
     }
   }
 
   function futureRevokePlans(uint256[] calldata planIds, uint256 revokeTime) external nonReentrant {
     for (uint256 i; i < planIds.length; i++) {
-      _revokePlan(msg.sender, planIds[i], revokeTime);
+      _revokePlan(planIds[i], revokeTime);
     }
   }
 
@@ -188,7 +188,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
         block.timestamp,
         redemptionTime
       );
-      if (balance > 0) _redeemPlan(msg.sender, planIds[i], balance, remainder, latestUnlock);
+      if (balance > 0) _redeemPlan(planIds[i], balance, remainder, latestUnlock);
     }
   }
 
@@ -196,19 +196,17 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /// @dev this takes the inputs from the _redeemPlans and processes the redemption delivering the available balance of redeemable tokens to the beneficiary
   /// if the plan is fully redeemed, as defined that the balance == amount, then the plan is deleted and NFT burned
   // if the plan is not fully redeemed, then the storage of start and amount are updated to reflect the remaining amount and most recent time redeemed for the new start date
-  /// @param holder is the address of the holder of the plan and NFT
   /// @param planId is the id of the vesting plan and NFT
   /// @param balance is the available redeemable balance
   /// @param remainder is the amount of tokens that are still unvested in the plan, and will be the new amount in the plan storage
   /// @param latestUnlock is the most recent timestamp for when redemption occured. Because periods may be longer than 1 second, the latestUnlock time may be the current block time, or the timestamp of the most recent period timestamp
   function _redeemPlan(
-    address holder,
     uint256 planId,
     uint256 balance,
     uint256 remainder,
     uint256 latestUnlock
   ) internal {
-    require(ownerOf(planId) == holder, '!owner');
+    require(ownerOf(planId) == msg.sender, '!owner');
     address token = plans[planId].token;
     if (remainder == 0) {
       delete plans[planId];
@@ -217,7 +215,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
       plans[planId].amount = remainder;
       plans[planId].start = latestUnlock;
     }
-    TransferHelper.withdrawTokens(token, holder, balance);
+    TransferHelper.withdrawTokens(token, msg.sender, balance);
     emit PlanRedeemed(planId, balance, remainder, latestUnlock);
   }
 
@@ -227,18 +225,17 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   /// The function then withdraws the unvested tokens that are revoked, delivering them to the vestingAdmin
   /// the function then transfers the vested balances to the plan beneficiary. 
   /// finally the function deletes the plan held in storage and burns the NFT. 
-  /// @param vestingAdmin is the vestingAdmin address 
   /// @param planId is the id of the plan and NFT
-  function _revokePlan(address vestingAdmin, uint256 planId, uint256 revokeTime) internal {
+  function _revokePlan(uint256 planId, uint256 revokeTime) internal {
     Plan memory plan = plans[planId];
-    require(vestingAdmin == plan.vestingAdmin, '!vestingAdmin');
+    require(msg.sender == plan.vestingAdmin, '!vestingAdmin');
     require(revokeTime >= block.timestamp, "!past revoke");
     (uint256 balance, uint256 remainder, ) = planBalanceOf(planId, block.timestamp, revokeTime);
     require(remainder > 0, '!Remainder');
     address holder = ownerOf(planId);
     delete plans[planId];
     _burn(planId);
-    TransferHelper.withdrawTokens(plan.token, vestingAdmin, remainder);
+    TransferHelper.withdrawTokens(plan.token, msg.sender, remainder);
     TransferHelper.withdrawTokens(plan.token, holder, balance);
     emit PlanRevoked(planId, balance, remainder);
   }
