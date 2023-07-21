@@ -91,7 +91,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   /// @dev this will call an internal function for processing the actual redemption of tokens, which will withdraw vested tokens and deliver them to the beneficiary
   /// @dev this function will redeem all claimable and vested tokens up to the current block.timestamp
   /// @param planIds is the array of the NFT planIds that are to be redeemed. If any have no redeemable balance they will be skipped. 
-  function redeemPlans(uint256[] memory planIds) external nonReentrant {
+  function redeemPlans(uint256[] calldata planIds) external nonReentrant {
     _redeemPlans(planIds, block.timestamp);
   }
 
@@ -100,7 +100,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   /// @dev this function will redeem only a partial amount of tokens based on a redemption timestamp that is in the past. This allows holders to redeem less than their fully vested amount for various reasons
   /// @param planIds is the array of the NFT planIds that are to be redeemed. If any have no redeemable balance they will be skipped.
   /// @param redemptionTime is the timestamp which will calculate the amount of tokens redeemable and redeem them based on that timestamp
-  function partialRedeemPlans(uint256[] memory planIds, uint256 redemptionTime) external nonReentrant {
+  function partialRedeemPlans(uint256[] calldata planIds, uint256 redemptionTime) external nonReentrant {
     require(redemptionTime < block.timestamp, '!future');
     _redeemPlans(planIds, redemptionTime);
   }
@@ -120,13 +120,13 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   /// @notice the function for a vestingAdmin to revoke vesting plans. 
   /// @dev this will call an internal function to revoke plans, whereby unvested tokens will be returned to the vestingAdmin, and any tokens that are vested will be delivered to the beneficiary(s)
   /// @param planIds is the array of the plan ids to be redeemed. the caller must be the vesting admin for all of the plans.
-   function revokePlans(uint256[] memory planIds) external nonReentrant {
+   function revokePlans(uint256[] calldata planIds) external nonReentrant {
     for (uint256 i; i < planIds.length; i++) {
       _revokePlan(msg.sender, planIds[i], block.timestamp);
     }
   }
 
-  function futureRevokePlans(uint256[] memory planIds, uint256 revokeTime) external nonReentrant {
+  function futureRevokePlans(uint256[] calldata planIds, uint256 revokeTime) external nonReentrant {
     for (uint256 i; i < planIds.length; i++) {
       _revokePlan(msg.sender, planIds[i], revokeTime);
     }
@@ -166,7 +166,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   /// @notice this function allows an owner of multiple vesting plans to delegate multiple of them in a single transaction, each planId corresponding to a delegatee address
   /// @param planIds is the ids of the vesting plan and NFT
   /// @param delegatees is the array of addresses where each vesting plan will delegate the tokens to
-  function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
+  function delegatePlans(uint256[] calldata planIds, address[] calldata delegatees) external nonReentrant {
     require(planIds.length == delegatees.length, 'array error');
     for (uint256 i; i < planIds.length; i++) {
       _delegate(msg.sender, planIds[i], delegatees[i]);

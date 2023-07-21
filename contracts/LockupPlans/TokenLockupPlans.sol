@@ -69,7 +69,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   /// @dev this will call an internal function for processing the actual redemption of tokens, which will withdraw unlocked tokens and deliver them to the beneficiary
   /// @dev this function will redeem all claimable and unlocked tokens up to the current block.timestamp
   /// @param planIds is the array of the NFT planIds that are to be redeemed. If any have no redeemable balance they will be skipped.
-  function redeemPlans(uint256[] memory planIds) external nonReentrant {
+  function redeemPlans(uint256[] calldata planIds) external nonReentrant {
     _redeemPlans(planIds, block.timestamp);
   }
 
@@ -78,7 +78,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   /// @dev this function will redeem only a partial amount of tokens based on a redemption timestamp that is in the past. This allows holders to redeem less than their fully unlocked amount for various reasons
   /// @param planIds is the array of the NFT planIds that are to be redeemed. If any have no redeemable balance they will be skipped.
   /// @param redemptionTime is the timestamp which will calculate the amount of tokens redeemable and redeem them based on that timestamp
-  function partialRedeemPlans(uint256[] memory planIds, uint256 redemptionTime) external nonReentrant {
+  function partialRedeemPlans(uint256[] calldata planIds, uint256 redemptionTime) external nonReentrant {
     require(redemptionTime < block.timestamp, '!future');
     _redeemPlans(planIds, redemptionTime);
   }
@@ -161,7 +161,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   /// @dev this function iterates through the array of plans and delegatees, delegating each individual NFT.
   /// @param planIds is the array of planIds that will be delegated
   /// @param delegatees is the array of addresses that each corresponding planId will be delegated to
-  function delegatePlans(uint256[] memory planIds, address[] memory delegatees) external nonReentrant {
+  function delegatePlans(uint256[] calldata planIds, address[] calldata delegatees) external nonReentrant {
     require(planIds.length == delegatees.length, 'array error');
     for (uint256 i; i < planIds.length; i++) {
       _delegateToken(delegatees[i], planIds[i]);
