@@ -119,7 +119,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   ) external nonReentrant returns (uint256[] memory newPlanIds) {
     newPlanIds = new uint256[](segmentAmounts.length);
     for (uint256 i; i < segmentAmounts.length; i++) {
-      uint256 newPlanId = _segmentPlan(msg.sender, planId, segmentAmounts[i]);
+      uint256 newPlanId = _segmentPlan(planId, segmentAmounts[i]);
       newPlanIds[i] = newPlanId;
     }
   }
@@ -138,8 +138,8 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     require(segmentAmounts.length == delegatees.length, '!length');
     newPlanIds = new uint256[](segmentAmounts.length);
     for (uint256 i; i < segmentAmounts.length; i++) {
-      uint256 newPlanId = _segmentPlan(msg.sender, planId, segmentAmounts[i]);
-      _delegate(msg.sender, newPlanId, delegatees[i]);
+      uint256 newPlanId = _segmentPlan(planId, segmentAmounts[i]);
+      _delegate(newPlanId, delegatees[i]);
       newPlanIds[i] = newPlanId;
     }
   }
@@ -150,7 +150,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   /// @param planId0 is the planId of a first plan to be combined
   /// @param planId1 is the planId of a second plan to be combined
   function combinePlans(uint256 planId0, uint256 planId1) external nonReentrant returns (uint256 survivingPlanId) {
-    survivingPlanId = _combinePlans(msg.sender, planId0, planId1);
+    survivingPlanId = _combinePlans(planId0, planId1);
   }
 
   /****EXTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/
@@ -162,7 +162,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   // this will physically transfer tokens to the new voting vault contract once deployed
   /// @param planId is the id of the lockup plan and NFT
   function setupVoting(uint256 planId) external nonReentrant returns (address votingVault) {
-    votingVault = _setupVoting(msg.sender, planId);
+    votingVault = _setupVoting(planId);
   }
 
   /// @notice function for an owner of a lockup plan to delegate a single lockup plan to  single delegate
@@ -170,7 +170,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   /// if there is no voting vault setup, this function will automatically create a voting vault and then delegate the tokens to the delegatee
   /// @param planId is the id of the lockup plan and NFT
   function delegate(uint256 planId, address delegatee) external nonReentrant {
-    _delegate(msg.sender, planId, delegatee);
+    _delegate(planId, delegatee);
   }
 
   /// @notice this function allows an owner of multiple lockup plans to delegate multiple of them in a single transaction, each planId corresponding to a delegatee address
@@ -179,7 +179,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   function delegatePlans(uint256[] calldata planIds, address[] calldata delegatees) external nonReentrant {
     require(planIds.length == delegatees.length, 'array error');
     for (uint256 i; i < planIds.length; i++) {
-      _delegate(msg.sender, planIds[i], delegatees[i]);
+      _delegate(planIds[i], delegatees[i]);
     }
   }
 
@@ -191,7 +191,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
       uint256 planId = tokenOfOwnerByIndex(msg.sender, i);
-      if (plans[planId].token == token) _delegate(msg.sender, planId, delegatee);
+      if (plans[planId].token == token) _delegate(planId, delegatee);
     }
   }
 
@@ -209,7 +209,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
         block.timestamp,
         redemptionTime
       );
-      if (balance > 0) _redeemPlan(msg.sender, planIds[i], balance, remainder, latestUnlock);
+      if (balance > 0) _redeemPlan(planIds[i], balance, remainder, latestUnlock);
     }
   }
 
@@ -218,20 +218,18 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   /// if the plan has a voting vault then tokens will be redeemed and transferred from the voting vault to the beneficiary.
   /// if the plan is fully redeemed, as defined that the balance == amount, then the plan is deleted and NFT burned
   // if the plan is not fully redeemed, then the storage of start and amount are updated to reflect the remaining amount and most recent time redeemed for the new start date
-  /// @param holder is the address of the holder of the plan and NFT
   /// @param planId is the id of the lockup plan and NFT
   /// @param balance is the available redeemable balance
   /// @param remainder is the amount of tokens that are still lcoked in the plan, and will be the new amount in the plan storage
   /// @param latestUnlock is the most recent timestamp for when redemption occured. Because periods may be longer than 1 second,
   /// the latestUnlock time may be the current block time, or the timestamp of the most recent period timestamp
   function _redeemPlan(
-    address holder,
     uint256 planId,
     uint256 balance,
     uint256 remainder,
     uint256 latestUnlock
   ) internal {
-    require(ownerOf(planId) == holder, '!owner');
+    require(ownerOf(planId) == msg.sender, '!owner');
     address token = plans[planId].token;
     address vault = votingVaults[planId];
     if (remainder == 0) {
@@ -243,9 +241,9 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
       plans[planId].start = latestUnlock;
     }
     if (vault == address(0)) {
-      TransferHelper.withdrawTokens(token, holder, balance);
+      TransferHelper.withdrawTokens(token, msg.sender, balance);
     } else {
-      VotingVault(vault).withdrawTokens(holder, balance);
+      VotingVault(vault).withdrawTokens(msg.sender, balance);
     }
     emit PlanRedeemed(planId, balance, remainder, latestUnlock);
   }
@@ -262,11 +260,10 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   /// and the storage of the original plan amount and rate is updated with the newplan amount and rate.
   /// at the end this checks if there is a voting vault setup for the original plan. If there is a voting vault setup, it will transfer tokens back from the original plan vault,
   /// then setup a new voting vault for the segment plan, thereby transferring the segment tokens to the new segment voting vault
-  /// @param holder is the owner of the lockup plan and NFT
   /// @param planId is the id of the lockup plan
   /// @param segmentAmount is the amount of tokens to be segmented off from the original plan and created into a new segment plan
-  function _segmentPlan(address holder, uint256 planId, uint256 segmentAmount) internal returns (uint256 newPlanId) {
-    require(ownerOf(planId) == holder, '!owner');
+  function _segmentPlan(uint256 planId, uint256 segmentAmount) internal returns (uint256 newPlanId) {
+    require(ownerOf(planId) == msg.sender, '!owner');
     Plan memory plan = plans[planId];
     require(segmentAmount < plan.amount, 'amount error');
     require(segmentAmount > 0, '0_segment');
@@ -290,7 +287,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     require(segmentEnd >= endCheck, 'segmentEnd error');
     plans[planId].amount = planAmount;
     plans[planId].rate = planRate;
-    _safeMint(holder, newPlanId);
+    _safeMint(msg.sender, newPlanId);
     plans[newPlanId] = Plan(plan.token, segmentAmount, plan.start, plan.cliff, segmentRate, plan.period);
     if (segmentOriginalEnd[planId] == 0) {
       segmentOriginalEnd[planId] = end;
@@ -300,7 +297,7 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
     }
     if (votingVaults[planId] != address(0)) {
       VotingVault(votingVaults[planId]).withdrawTokens(address(this), segmentAmount);
-      _setupVoting(holder, newPlanId);
+      _setupVoting(newPlanId);
     }
     emit PlanSegmented(
       planId,
@@ -328,12 +325,11 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   /// if One of the plans has a voting vault, then that plan will be the survivor and then tokens will be transferred and consolidated into that plan
   /// if both have a voting vault, then plan0 will be the survivor and tokens consolidated to plan0 voting vault
   /// if neither have a voting vault then nothing is done for voting vaults.
-  /// @param holder is the owner of both lockup plans
   /// @param planId0 is the planId of the first plan in the combination
   /// @param planId1 is the planId of a second plan to be combined
-  function _combinePlans(address holder, uint256 planId0, uint256 planId1) internal returns (uint256 survivingPlan) {
-    require(ownerOf(planId0) == holder, '!owner');
-    require(ownerOf(planId1) == holder, '!owner');
+  function _combinePlans(uint256 planId0, uint256 planId1) internal returns (uint256 survivingPlan) {
+    require(ownerOf(planId0) == msg.sender, '!owner');
+    require(ownerOf(planId1) == msg.sender, '!owner');
     Plan memory plan0 = plans[planId0];
     Plan memory plan1 = plans[planId1];
     require(plan0.token == plan1.token, 'token error');
@@ -454,13 +450,12 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   // during the constructor setup of the voting vault, it will auto delegate the voting vault address to whatever the existing delegate of the  plan holder has delegated to
   // if it has not delegated yet, it will self-delegate the tokens
   /// then transfer the tokens remaining in the lockup plan to the voting vault physically
-  /// @param holder is the address of the holer of th lockup plan and NFT
   /// @param planId is the id of the lockup plan and NFT
-  function _setupVoting(address holder, uint256 planId) internal returns (address) {
-    require(ownerOf(planId) == holder, '!owner');
+  function _setupVoting(uint256 planId) internal returns (address) {
+    require(ownerOf(planId) == msg.sender, '!owner');
     require(votingVaults[planId] == address(0), 'exists');
     Plan memory plan = plans[planId];
-    VotingVault vault = new VotingVault(plan.token, holder);
+    VotingVault vault = new VotingVault(plan.token, msg.sender);
     votingVaults[planId] = address(vault);
     TransferHelper.withdrawTokens(plan.token, address(vault), plan.amount);
     emit VotingVaultCreated(planId, address(vault));
@@ -470,14 +465,13 @@ contract VotingTokenLockupPlans is ERC721Enumerable, LockupStorage, ReentrancyGu
   /// @notice this internal function will physically delegate tokens held in a voting vault to a delegatee
   /// @dev if a voting vautl has not been setup yet, then the function will call the internal _setupVoting function and setup a new voting vault
   /// and then it will delegate the tokens held in the vault to the delegatee
-  /// @param holder is the address of the holer of th lockup plan and NFT
   /// @param planId is the id of the lockup plan and NFT
   /// @param delegatee is the address of the delegatee where the tokens in the voting vault will be delegated to
-  function _delegate(address holder, uint256 planId, address delegatee) internal {
-    require(ownerOf(planId) == holder, '!owner');
+  function _delegate(uint256 planId, address delegatee) internal {
+    require(ownerOf(planId) == msg.sender, '!owner');
     address vault = votingVaults[planId];
     if (votingVaults[planId] == address(0)) {
-      vault = _setupVoting(holder, planId);
+      vault = _setupVoting(planId);
     }
     VotingVault(vault).delegateTokens(delegatee);
   }

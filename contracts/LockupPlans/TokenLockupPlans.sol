@@ -110,7 +110,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   ) external nonReentrant returns (uint256[] memory newPlanIds) {
     newPlanIds = new uint256[](segmentAmounts.length);
     for (uint256 i; i < segmentAmounts.length; i++) {
-      uint256 newPlanId = _segmentPlan(msg.sender, planId, segmentAmounts[i]);
+      uint256 newPlanId = _segmentPlan(planId, segmentAmounts[i]);
       newPlanIds[i] = newPlanId;
     }
   }
@@ -128,7 +128,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     require(segmentAmounts.length == delegatees.length, 'length_error');
     newPlanIds = new uint256[](segmentAmounts.length);
     for (uint256 i; i < segmentAmounts.length; i++) {
-      uint256 newPlanId = _segmentPlan(msg.sender, planId, segmentAmounts[i]);
+      uint256 newPlanId = _segmentPlan(planId, segmentAmounts[i]);
       _delegateToken(delegatees[i], newPlanId);
       newPlanIds[i] = newPlanId;
     }
@@ -139,7 +139,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   /// @param planId0 is the planId of a first plan to be combined
   /// @param planId1 is the planId of a second plan to be combined
   function combinePlans(uint256 planId0, uint256 planId1) external nonReentrant returns (uint256 survivingPlanId) {
-    survivingPlanId = _combinePlans(msg.sender, planId0, planId1);
+    survivingPlanId = _combinePlans(planId0, planId1);
   }
 
   /****EXTERNAL VOTING & DELEGATION FUNCTIONS*********************************************************************************************************************************************/
@@ -194,7 +194,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
         block.timestamp,
         redemptionTime
       );
-      if (balance > 0) _redeemPlan(msg.sender, planIds[i], balance, remainder, latestUnlock);
+      if (balance > 0) _redeemPlan(planIds[i], balance, remainder, latestUnlock);
     }
   }
 
@@ -202,20 +202,18 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   /// @dev this takes the inputs from the _redeemPlans and processes the redemption delivering the available balance of redeemable tokens to the beneficiary
   /// if the plan is fully redeemed, as defined that the balance == amount, then the plan is deleted and NFT burned
   // if the plan is not fully redeemed, then the storage of start and amount are updated to reflect the remaining amount and most recent time redeemed for the new start date
-  /// @param holder is the address of the holder of the plan and NFT
   /// @param planId is the id of the lockup plan and NFT
   /// @param balance is the available redeemable balance
   /// @param remainder is the amount of tokens that are still lcoked in the plan, and will be the new amount in the plan storage
   /// @param latestUnlock is the most recent timestamp for when redemption occured. Because periods may be longer than 1 second,
   /// the latestUnlock time may be the current block time, or the timestamp of the most recent period timestamp
   function _redeemPlan(
-    address holder,
     uint256 planId,
     uint256 balance,
     uint256 remainder,
     uint256 latestUnlock
   ) internal {
-    require(ownerOf(planId) == holder, '!owner');
+    require(ownerOf(planId) == msg.sender, '!owner');
     address token = plans[planId].token;
     if (remainder == 0) {
       delete plans[planId];
@@ -224,7 +222,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
       plans[planId].amount = remainder;
       plans[planId].start = latestUnlock;
     }
-    TransferHelper.withdrawTokens(token, holder, balance);
+    TransferHelper.withdrawTokens(token, msg.sender, balance);
     emit PlanRedeemed(planId, balance, remainder, latestUnlock);
   }
 
@@ -238,11 +236,10 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   /// so that tokens do not unlock early, and then it is a valid segment.
   /// finally a new NFT is minted with the Segment plan details
   /// and the storage of the original plan amount and rate is updated with the newplan amount and rate.
-  /// @param holder is the owner of the lockup plan and NFT
   /// @param planId is the id of the lockup plan
   /// @param segmentAmount is the amount of tokens to be segmented off from the original plan and created into a new segment plan
-  function _segmentPlan(address holder, uint256 planId, uint256 segmentAmount) internal returns (uint256 newPlanId) {
-    require(ownerOf(planId) == holder, '!owner');
+  function _segmentPlan(uint256 planId, uint256 segmentAmount) internal returns (uint256 newPlanId) {
+    require(ownerOf(planId) == msg.sender, '!owner');
     Plan memory plan = plans[planId];
     require(segmentAmount < plan.amount, 'amount error');
     require(segmentAmount > 0, '0_segment');
@@ -266,7 +263,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     require(segmentEnd >= endCheck, 'segmentEnd error');
     plans[planId].amount = planAmount;
     plans[planId].rate = planRate;
-    _safeMint(holder, newPlanId);
+    _safeMint(msg.sender, newPlanId);
     plans[newPlanId] = Plan(plan.token, segmentAmount, plan.start, plan.cliff, segmentRate, plan.period);
     if (segmentOriginalEnd[planId] == 0) {
       segmentOriginalEnd[planId] = end;
@@ -297,12 +294,11 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   /// if everything checks out, and the new end date of the combined plan will result in an end date equal to or later than the two plans, then they can be combined
   /// combining plans will delete the plan1 and burn the NFT related to it
   /// and then update the storage of the plan0 with the combined amount and combined rate
-  /// @param holder is the owner of both lockup plans
   /// @param planId0 is the planId of the first plan in the combination
   /// @param planId1 is the planId of a second plan to be combined
-  function _combinePlans(address holder, uint256 planId0, uint256 planId1) internal returns (uint256 survivingPlan) {
-    require(ownerOf(planId0) == holder, '!owner');
-    require(ownerOf(planId1) == holder, '!owner');
+  function _combinePlans(uint256 planId0, uint256 planId1) internal returns (uint256 survivingPlan) {
+    require(ownerOf(planId0) == msg.sender, '!owner');
+    require(ownerOf(planId1) == msg.sender, '!owner');
     Plan memory plan0 = plans[planId0];
     Plan memory plan1 = plans[planId1];
     require(plan0.token == plan1.token, 'token error');
