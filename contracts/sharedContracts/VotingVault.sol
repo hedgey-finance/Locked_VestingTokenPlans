@@ -35,7 +35,10 @@ contract VotingVault {
 
     function withdrawTokens(address to, uint256 amount) external onlyController {
         TransferHelper.withdrawTokens(token, to, amount);
-        if (IERC20(token).balanceOf(address(this)) == 0) selfdestruct;
+        if (IERC20(token).balanceOf(address(this)) == 0) {
+            delete token;
+            delete controller;
+        }
     }
 
 }
