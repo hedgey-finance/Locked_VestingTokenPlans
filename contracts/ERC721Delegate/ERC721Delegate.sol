@@ -127,7 +127,7 @@ abstract contract ERC721Delegate is ERC721, IERC721Delegate {
   }
 
   // function for transfering should reduce the balances of from by 1, increase the balances of to by 1, and set the delegate address To
-  function _transferDelegate(address to, uint256 tokenId) private {
+  function _transferDelegate(address to, uint256 tokenId) internal {
     _removeDelegate(tokenId);
     _addDelegate(to, tokenId);
   }

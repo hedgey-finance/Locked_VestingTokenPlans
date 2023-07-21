@@ -21,4 +21,8 @@ contract TokenLockupPlans_Bound is TokenLockupPlans {
   function _transfer(address from, address to, uint256 tokenId) internal virtual override {
     revert('Not transferrable');
   }
+
+  function transferAndDelegate(uint256 planId, address from, address to, address delegatee) external override  {
+    revert('Not transferrable');
+  }
 }

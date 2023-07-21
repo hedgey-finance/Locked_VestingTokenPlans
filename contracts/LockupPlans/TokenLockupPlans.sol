@@ -180,6 +180,11 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     }
   }
 
+  function transferAndDelegate(uint256 planId, address from, address to, address delegatee) external virtual nonReentrant {
+    transferFrom(from, to, planId);
+    _transferDelegate(delegatee, planId);
+  }
+
   /****CORE INTERNAL FUNCTIONS*********************************************************************************************************************************************/
 
   /// @notice function that will intake an array of planIds and a redemption time, and then check the balances that are available to be redeemed
