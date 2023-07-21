@@ -22,7 +22,7 @@ library TransferHelper {
     uint256 amount
   ) internal {
     uint256 priorBalance = IERC20(token).balanceOf(address(to));
-    require(IERC20(token).balanceOf(msg.sender) >= amount, 'THL01');
+    require(IERC20(token).balanceOf(from) >= amount, 'THL01');
     SafeERC20.safeTransferFrom(IERC20(token), from, to, amount);
     uint256 postBalance = IERC20(token).balanceOf(address(to));
     require(postBalance - priorBalance == amount, 'THL02');
