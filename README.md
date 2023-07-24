@@ -68,3 +68,12 @@ npx hardhat run scripts/deploy.js --network <network-name>
 
 
 ## Mainnet Deployments
+
+
+## Updates during Audit added to code 
+- Revoke does not distribute tokens out to the recipient immediately, they are left with a claimable nft with original vest date but cannot be revoked any more
+- Add in functionality to transferAndDelegate in same transaction
+- Add in ability to approve an allowance to delegate (like transfer allowances)
+- Updates to calldata for gas savings
+- Updates to using "holder" instead of msg.sender
+- Using OZ's reccomendation of overridning beforeTransfer functions with the hook override
