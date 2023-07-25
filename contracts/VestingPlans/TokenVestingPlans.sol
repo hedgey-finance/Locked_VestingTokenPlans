@@ -103,7 +103,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
     uint256 balance = balanceOf(msg.sender);
     uint256[] memory planIds = new uint256[](balance);
     for (uint256 i; i < balance; i++) {
-      uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
+      uint256 planId = tokenOfOwnerByIndex(msg.sender, i);
       planIds[i] = planId;
     }
     _redeemPlans(planIds, block.timestamp);
@@ -168,7 +168,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   function delegateAll(address token, address delegatee) external {
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
-      uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
+      uint256 planId = tokenOfOwnerByIndex(msg.sender, i);
       if (plans[planId].token == token) _delegateToken(delegatee, planId);
     }
   }
@@ -249,7 +249,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
     uint256 holdersBalance = balanceOf(holder);
     for (uint256 i; i < holdersBalance; i++) {
-      uint256 planId = _tokenOfOwnerByIndex(holder, i);
+      uint256 planId = tokenOfOwnerByIndex(holder, i);
       Plan memory plan = plans[planId];
       if (token == plan.token) {
         lockedBalance += plan.amount;
@@ -275,14 +275,14 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
 
   /****NFT FRANSFER SPECIAL OVERRIDE FUNCTIONS*********************************************************************************************************************************************/
 
-  /// @notice special function to transfer an NFT that overrides the normal ERC721 transferFrom function.
+  ///  @notice special function to transfer an NFT that overrides the normal ERC721 transferFrom function.
   /// this function lets a vestingAdmin of a plan transfer the NFT on behalf of a the holder of an NFT. 
   /// the vesting plan must have the adminTransferOBO toggle turned on to true for this function to be called. 
   /// this functin cannot be called by the owner / beneficiary of the NFT and vesting plan. 
   /// the to address cannot be the vestingAdmin address
-  /// @param from is the address the NFT and plan is transferred from
-  /// @param to is the address where the NFT and plan is being transferred to
-  /// @param tokenId is the NFT tokenID, the same as the planId to be transferred
+  ///  @param from is the address the NFT and plan is transferred from
+  ///  @param to is the address where the NFT and plan is being transferred to
+  ///  @param tokenId is the NFT tokenID, the same as the planId to be transferred
   function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721) {
     require(plans[tokenId].adminTransferOBO, '!transferrable');
     require(to != plans[tokenId].vestingAdmin, '!transfer to admin');
@@ -295,4 +295,5 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
   function _safeTransfer(address from, address to, uint256 tokenId, bytes memory data) internal override {
     revert('!transferrable');
   }
+
 }

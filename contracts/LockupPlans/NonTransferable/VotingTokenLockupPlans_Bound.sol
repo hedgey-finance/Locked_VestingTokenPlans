@@ -18,11 +18,15 @@ contract VotingTokenLockupPlans_Bound is VotingTokenLockupPlans {
   constructor(string memory name, string memory symbol) VotingTokenLockupPlans(name, symbol) {}
   
   /// @notice this function overrides the internal transfer function so that these plans and tokens cannot be transferred
-  function _transfer(address from, address to, uint256 tokenId) internal virtual override {
-    revert('Not transferrable');
-  }
-
-  function transferAndDelegate(uint256 planId, address from, address to, address delegatee) external override  {
-    revert('Not transferrable');
+  /// we check that the from address is not 0, which would indicate a mint, or that the to address is not 0, which would be a burn
+  /// if neither address is the 0x0, then it is a transfer between wallets and is not allowable
+  function _beforeTokenTransfer(
+    address from,
+    address to,
+    uint256 firstTokenId,
+    uint256 batchSize
+  ) internal virtual override {
+    super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
+    if (from != address(0) && to != address(0)) revert('Not Transferable');
   }
 }

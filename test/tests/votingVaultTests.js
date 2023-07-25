@@ -66,8 +66,8 @@ const votingVaultTests = (vesting, params) => {
       : await hedgey.connect(a).transferFrom(a.address, c.address, '2');
     const vv = await hedgey.votingVaults('2');
     expect(await token.delegates(vv)).to.eq(d.address);
-    await expect(hedgey.connect(d).delegate('2', c.address)).to.be.revertedWith('!owner');
-    await expect(hedgey.connect(a).delegate('2', c.address)).to.be.revertedWith('!owner');
+    await expect(hedgey.connect(d).delegate('2', c.address)).to.be.revertedWith('!delegator');
+    await expect(hedgey.connect(a).delegate('2', c.address)).to.be.revertedWith('!delegator');
     expect(await token.delegates(vv)).to.eq(d.address);
     await hedgey.connect(c).delegate('2', c.address);
     expect(await token.delegates(vv)).to.eq(c.address);
@@ -234,6 +234,73 @@ const votingVaultTests = (vesting, params) => {
     })
 };
 
+const votingVaultDelegatorTests = (vesting, params) => {
+  let s, admin, a, b, c, d, hedgey, token, dai, usdc;
+  let amount, start, cliff, period, rate, end;
+  it('creates a plan and the holder creates a voting vault, then approves wallet B to redelegate the tokens', async () => {
+    s = await setup();
+    hedgey = vesting ? s.voteVest : s.voteLocked;
+    admin = s.admin;
+    a = s.a;
+    b = s.b;
+    c = s.c;
+    d = s.d;
+    token = s.token;
+    dai = s.dai;
+    usdc = s.usdc;
+    await token.approve(hedgey.address, C.E18_1000000.mul(10000));
+    await dai.approve(hedgey.address, C.E18_1000000.mul(10000));
+    await usdc.approve(hedgey.address, C.E18_1000000.mul(10000));
+    let now = BigNumber.from(await time.latest());
+    amount = params.amount;
+    period = params.period;
+    rate = params.rate;
+    start = BigNumber.from(now).add(params.start);
+    cliff = BigNumber.from(start).add(params.cliff);
+    end = C.planEnd(start, amount, rate, period);
+    vesting
+      ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)
+      : await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    let tx = await hedgey.connect(a).setupVoting('1');
+    const votingVault = (await tx.wait()).events[3].args.vaultAddress;
+    expect(await hedgey.votingVaults('1')).to.eq(votingVault);
+    expect(await token.balanceOf(votingVault)).to.eq(amount);
+    expect(await token.delegates(votingVault)).to.eq(a.address);
+    expect(await hedgey.lockedBalances(a.address, token.address)).to.eq(amount);
+    expect(await token.delegates(votingVault)).to.eq(a.address);
+    expect(await hedgey.connect(a).approveDelegator(b.address, 1)).to.emit('DelegatorApproved').withArgs(a.address, b.address, 1);
+    expect(await hedgey.connect(b).delegate(1, b.address)).to.emit('DelegateChanged').withArgs(votingVault, a.address, b.address);
+    expect(await token.delegates(votingVault)).to.eq(b.address);
+  });
+  it('wallet A approves an operator with wallet C, who redelegates the tokens', async () => {
+    const votingVault = await hedgey.votingVaults(1)
+    expect(await hedgey.connect(a).setApprovalForAllDelegation(c.address, true)).to.emit('ApprovalForAllDelegation').withArgs(a.address, c.address, true);
+    expect(await hedgey.connect(c).approveDelegator(C.ZERO_ADDRESS, 1)).to.emit('DelegatorApproved').withArgs(a.address, C.ZERO_ADDRESS, 1);
+    await expect(hedgey.connect(b).delegate(1, c.address)).to.be.revertedWith('!delegator');
+    expect(await hedgey.connect(a).delegate(1, a.address)).to.emit('DelegateChanged').withArgs(votingVault, b.address, a.address);
+    expect(await token.delegates(votingVault)).to.eq(a.address);
+    expect(await hedgey.connect(c).delegate(1, c.address)).to.emit('DelegateChanged').withArgs(votingVault, a.address, c.address);
+    expect(await token.delegates(votingVault)).to.eq(c.address);
+    expect(await hedgey.isApprovedForAllDelegation(a.address, c.address)).to.eq(true);
+  });
+  it('wallet C acts as approver to approve wallet D as a delegator', async () => {
+    const votingVault = await hedgey.votingVaults(1)
+    expect(await hedgey.connect(c).approveDelegator(d.address, 1)).to.emit('DelegatorApproved').withArgs(a.address, d.address, 1);
+    expect(await hedgey.getApprovedDelegator(1)).to.eq(d.address);
+    expect(await hedgey.connect(d).delegate(1, d.address)).to.emit('DelegateChanged').withArgs(votingVault, c.address, d.address);
+  });
+  it('mints another token to wallet A and C can as operator delegate both plans', async () => {
+    vesting
+      ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)
+      : await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    await hedgey.connect(c).delegatePlans(['1', '2'], [c.address, b.address]);
+    const vv1 = await hedgey.votingVaults(1);
+    const vv2 = await hedgey.votingVaults(2);
+    expect(await token.delegates(vv1)).to.eq(c.address);
+    expect(await token.delegates(vv2)).to.eq(b.address);
+  });
+}
+
 const votingVaultErrorTests = (vesting) => {
   let s, admin, a, b, c, d, hedgey, token, dai, usdc;
   let amount, start, cliff, period, rate, end;
@@ -262,8 +329,8 @@ const votingVaultErrorTests = (vesting) => {
       ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)
       : await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
     await expect(hedgey.connect(b).setupVoting('1')).to.be.revertedWith('!owner');
-    await expect(hedgey.connect(b).delegate('1', b.address)).to.be.revertedWith('!owner');
-    await expect(hedgey.connect(b).delegatePlans(['1'], [b.address])).to.be.revertedWith('!owner');
+    await expect(hedgey.connect(b).delegate('1', b.address)).to.be.revertedWith('!delegator');
+    await expect(hedgey.connect(b).delegatePlans(['1'], [b.address])).to.be.revertedWith('!delegator');
   });
   it('reverts if the plan holder already has a voting vault setup', async () => {
     await hedgey.connect(a).setupVoting('1');
@@ -305,4 +372,5 @@ const votingVaultErrorTests = (vesting) => {
 module.exports = {
   votingVaultErrorTests,
   votingVaultTests,
+  votingVaultDelegatorTests,
 };
