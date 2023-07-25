@@ -250,9 +250,10 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
     if (balance == 0) {
       delete plans[planId];
       _burn(planId);
+      delete votingVaults[planId];
     } else {
       plans[planId].amount = balance;
-      delete votingVaults[planId];
+      plans[planId].vestingAdmin = address(0);
     }
     address vault = votingVaults[planId];
     if (vault == address(0)) {
