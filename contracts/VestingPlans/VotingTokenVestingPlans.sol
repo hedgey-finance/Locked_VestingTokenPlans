@@ -247,16 +247,19 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
     (uint256 balance, uint256 remainder, ) = planBalanceOf(planId, block.timestamp, revokeTime);
     require(remainder > 0, '!Remainder');
     address holder = ownerOf(planId);
-    delete plans[planId];
-    _burn(planId);
+    if (balance == 0) {
+      delete plans[planId];
+      _burn(planId);
+      delete votingVaults[planId];
+    } else {
+      plans[planId].amount = balance;
+      plans[planId].vestingAdmin = address(0);
+    }
     address vault = votingVaults[planId];
     if (vault == address(0)) {
       TransferHelper.withdrawTokens(plan.token, msg.sender, remainder);
-      TransferHelper.withdrawTokens(plan.token, holder, balance);
     } else {
-      delete votingVaults[planId];
       VotingVault(vault).withdrawTokens(msg.sender, remainder);
-      VotingVault(vault).withdrawTokens(holder, balance);
     }
     emit PlanRevoked(planId, balance, remainder);
   }
@@ -313,6 +316,13 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
 
   /****NFT FRANSFER SPECIAL OVERRIDE FUNCTIONS*********************************************************************************************************************************************/
 
+  function toggleAdminTransferOBO(uint256 planId, bool transferable) external nonReentrant {
+    require(msg.sender == ownerOf(planId), '!owner');
+    plans[planId].adminTransferOBO = transferable;
+    emit PlanVestingAdminTransferToggle(planId, transferable);
+  }
+
+
   /// @notice special function to transfer an NFT that overrides the normal ERC721 transferFrom function.
   /// this function lets a vestingAdmin of a plan transfer the NFT on behalf of a the holder of an NFT.
   /// the vesting plan must have the adminTransferOBO toggle turned on to true for this function to be called.
@@ -334,19 +344,4 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
     revert('!transferrable');
   }
 
-  // function _beforeTokenTransfer(
-  //   address from,
-  //   address to,
-  //   uint256 firstTokenId,
-  //   uint256 batchSize
-  // ) internal virtual override {
-  //   super._beforeTokenTransfer(from, to, firstTokenId, batchSize);
-  //   uint256 tokenId = firstTokenId;
-  //   if (from != address(0) && to != address(0)) {
-  //     require(plans[tokenId].adminTransferOBO, '!transferrable');
-  //     require(to != plans[tokenId].vestingAdmin, '!transfer to admin');
-  //     require(msg.sender == plans[tokenId].vestingAdmin, '!vestingAdmin');
-  //     emit PlanTransferredByVestingAdmin(tokenId, from, to);
-  //   }
-  // }
 }

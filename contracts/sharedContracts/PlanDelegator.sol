@@ -16,13 +16,26 @@ abstract contract PlanDelegator is ERC721Enumerable {
 
   function approveDelegator(address delegator, uint256 planId) public virtual {
     address owner = ownerOf(planId);
-    require(msg.sender == owner || isApprovedForAllDelegation(owner, msg.sender), '!owner or delegator operator');
+    require(msg.sender == owner || isApprovedForAllDelegation(owner, msg.sender), '!ownerOperator');
     require(delegator != msg.sender, '!self approval');
     _approveDelegator(delegator, planId);
   }
 
+  function approveSpenderDelegator(address spender, uint256 planId) public virtual {
+    address owner = ownerOf(planId);
+    require(msg.sender == owner || (isApprovedForAllDelegation(owner, msg.sender) && isApprovedForAll(owner, msg.sender)), '!ownerOperator');
+    require(spender != msg.sender, '!self approval');
+    _approveDelegator(spender, planId);
+    _approve(spender, planId);
+  }
+
   function setApprovalForAllDelegation(address operator, bool approved) public virtual {
     _setApprovalForAllDelegation(msg.sender, operator, approved);
+  }
+
+  function setApprovalForOperator(address operator, bool approved) public virtual {
+    _setApprovalForAllDelegation(msg.sender, operator, approved);
+    _setApprovalForAll(msg.sender, operator, approved);
   }
 
   function _approveDelegator(address delegator, uint256 planId) internal virtual {
