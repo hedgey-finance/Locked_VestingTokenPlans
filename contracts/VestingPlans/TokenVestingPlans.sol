@@ -233,10 +233,13 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
     (uint256 balance, uint256 remainder, ) = planBalanceOf(planId, block.timestamp, revokeTime);
     require(remainder > 0, '!Remainder');
     address holder = ownerOf(planId);
-    delete plans[planId];
-    _burn(planId);
+    if(balance == 0) {
+      delete plans[planId];
+      _burn(planId);
+    } else {
+      plans[planId].amount = balance;
+    }
     TransferHelper.withdrawTokens(plan.token, msg.sender, remainder);
-    TransferHelper.withdrawTokens(plan.token, holder, balance);
     emit PlanRevoked(planId, balance, remainder);
   }
   
@@ -275,6 +278,11 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
 
   /****NFT FRANSFER SPECIAL OVERRIDE FUNCTIONS*********************************************************************************************************************************************/
 
+  function toggleAdminTransferOBO(uint256 planId, bool transferable) external nonReentrant {
+    require(msg.sender == ownerOf(planId), '!owner');
+    plans[planId].adminTransferOBO = transferable;
+    emit PlanVestingAdminTransferToggle(planId, transferable);
+  }
   ///  @notice special function to transfer an NFT that overrides the normal ERC721 transferFrom function.
   /// this function lets a vestingAdmin of a plan transfer the NFT on behalf of a the holder of an NFT. 
   /// the vesting plan must have the adminTransferOBO toggle turned on to true for this function to be called. 

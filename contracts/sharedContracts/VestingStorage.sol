@@ -58,6 +58,8 @@ contract VestingStorage {
   /// @notice event emitted when a plan admin transfers an plan and NFT on behalf of a beneficiary from one wallet address to another
   event PlanTransferredByVestingAdmin(uint256 indexed id, address indexed from, address indexed to);
 
+  event PlanVestingAdminTransferToggle(uint256 indexed id, bool transferable);
+
   /// @notice public function to get the balance of a plan, this function is used by the contracts to calculate how much can be redeemed and revoked, and how to reset the start date
   /// @param planId is the NFT token ID and plan Id
   /// @param timeStamp is the effective current time stamp, can be polled for the future for estimating redeemable tokens
