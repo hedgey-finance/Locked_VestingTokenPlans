@@ -238,6 +238,7 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
       _burn(planId);
     } else {
       plans[planId].amount = balance;
+      plans[planId].vestingAdmin = address(0);
     }
     TransferHelper.withdrawTokens(plan.token, msg.sender, remainder);
     emit PlanRevoked(planId, balance, remainder);
