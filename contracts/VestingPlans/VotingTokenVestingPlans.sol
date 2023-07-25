@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
-import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol';
+import '../sharedContracts/PlanDelegator.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 import '../libraries/TransferHelper.sol';
 import '../libraries/TimelockLibrary.sol';
@@ -13,13 +13,13 @@ import '../sharedContracts/VestingStorage.sol';
 
 /// @title VotingTokenVestingPlans - An efficient way to allocate tokens to employees that vest over time
 /// @notice This contract allows people to grant tokens to beneficiaries that vest over time with the added functionalities;
-/// Each vesting plan is a unique NFT, leveraging the backbone of the ERC721 contract to represent a unique vesting plan 
+/// Each vesting plan is a unique NFT, leveraging the backbone of the ERC721 contract to represent a unique vesting plan
 /// 1. Revokable: plans can be revoked and unvested tokens returned to the company (vesting admin)
 /// 2. Soul Bound: plans are by default soul bound and not transferable, however can be transferred by an admin in emergencies
 /// 3. Governance optimized for on-chain voting: These are built to allow beneficiaries to vote with their unvested tokens on chain with the standard ERC20Votes contract, as well as on snapshot
 /// 4. Beneficiary Claims: Beneficiaries get to choose when to claim their tokens, and can claim partial amounts that are less than the amount they vested for tax optimization
 
-contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, ReentrancyGuard, URIAdmin {
+contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGuard, URIAdmin {
   /// @notice uses counters for incrementing token IDs which are the planIds
   using Counters for Counters.Counter;
   Counters.Counter private _planIds;
@@ -41,7 +41,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
 
   /****CORE EXTERNAL FUNCTIONS*********************************************************************************************************************************************/
 
-  /// @notice function to create a vesting plan. 
+  /// @notice function to create a vesting plan.
   /// @dev this function will pull the tokens into this contract for escrow, increment the planIds, mint an NFT to the recipient, and create the storage Plan and map it to the newly minted NFT token ID in storage
   /// @param recipient the address of the recipient and beneficiary of the plan
   /// @param token the address of the ERC20 token
@@ -49,7 +49,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   /// @param start the start date of the vesting plan, unix time
   /// @param cliff a cliff date which is a discrete date where tokens are not vested until this date, and then vest in a large single chunk on the cliff date
   /// @param rate the amount of tokens that vest in a single period
-  /// @param period the amount of time in between each vesting time stamp, in seconds. A period of 1 means that tokens vest every second in a 'streaming' style. 
+  /// @param period the amount of time in between each vesting time stamp, in seconds. A period of 1 means that tokens vest every second in a 'streaming' style.
   /// @param vestingAdmin is the address of an administrator in charge of revoking the plan, pulling back any unvested tokens to the vestingAdmin address
   /// @param adminTransferOBO is an optional toggle to allow the vestingAdmin to transfer a plan and NFT to another wallet on behalf of (OBO) a beneficiary. To be used only for emergencies.
   function createPlan(
@@ -90,7 +90,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   /// @notice function for a beneficiary to redeem vested tokens from a group of plans
   /// @dev this will call an internal function for processing the actual redemption of tokens, which will withdraw vested tokens and deliver them to the beneficiary
   /// @dev this function will redeem all claimable and vested tokens up to the current block.timestamp
-  /// @param planIds is the array of the NFT planIds that are to be redeemed. If any have no redeemable balance they will be skipped. 
+  /// @param planIds is the array of the NFT planIds that are to be redeemed. If any have no redeemable balance they will be skipped.
   function redeemPlans(uint256[] calldata planIds) external nonReentrant {
     _redeemPlans(planIds, block.timestamp);
   }
@@ -117,10 +117,10 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
     _redeemPlans(planIds, block.timestamp);
   }
 
-  /// @notice the function for a vestingAdmin to revoke vesting plans. 
+  /// @notice the function for a vestingAdmin to revoke vesting plans.
   /// @dev this will call an internal function to revoke plans, whereby unvested tokens will be returned to the vestingAdmin, and any tokens that are vested will be delivered to the beneficiary(s)
   /// @param planIds is the array of the plan ids to be redeemed. the caller must be the vesting admin for all of the plans.
-   function revokePlans(uint256[] calldata planIds) external nonReentrant {
+  function revokePlans(uint256[] calldata planIds) external nonReentrant {
     for (uint256 i; i < planIds.length; i++) {
       _revokePlan(planIds[i], block.timestamp);
     }
@@ -145,9 +145,9 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   }
 
   /****EXTERNAL VOTING & DELGATION FUNCTIONS*********************************************************************************************************************************************/
-  /// @notice functions for the owners of vesting plans to setup on chain voting vaults, and then delegate those tokens. 
-  /// these are explicity for tokens that are of the ERC20Votes format, which have a delegate and delegates function. 
-  /// tokens that do not have the standard delegate and delegates functionality for on-chain voting will revert when delegating or creating onchain voting vaults. 
+  /// @notice functions for the owners of vesting plans to setup on chain voting vaults, and then delegate those tokens.
+  /// these are explicity for tokens that are of the ERC20Votes format, which have a delegate and delegates function.
+  /// tokens that do not have the standard delegate and delegates functionality for on-chain voting will revert when delegating or creating onchain voting vaults.
 
   /// @notice function to setup a voting vault, this calls an internal voting function to set it up
   /// @param planId is the id of the vesting plan and NFT
@@ -212,12 +212,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   /// @param balance is the available redeemable balance
   /// @param remainder is the amount of tokens that are still unvested in the plan, and will be the new amount in the plan storage
   /// @param latestUnlock is the most recent timestamp for when redemption occured. Because periods may be longer than 1 second, the latestUnlock time may be the current block time, or the timestamp of the most recent period timestamp
-  function _redeemPlan(
-    uint256 planId,
-    uint256 balance,
-    uint256 remainder,
-    uint256 latestUnlock
-  ) internal {
+  function _redeemPlan(uint256 planId, uint256 balance, uint256 remainder, uint256 latestUnlock) internal {
     require(ownerOf(planId) == msg.sender, '!owner');
     address token = plans[planId].token;
     address vault = votingVaults[planId];
@@ -239,46 +234,49 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
 
   /// @notice the internal function to revoke a vesting plan
   /// @dev this is called by the external revokePlans function, which inputs the msg.sender as the vestingAdmin and the planId from the inputs
-  /// this function checks that the vestingAdmin is the vestingAdmin, and that there is actually a revokable balance. 
+  /// this function checks that the vestingAdmin is the vestingAdmin, and that there is actually a revokable balance.
   /// The function then withdraws the unvested tokens that are revoked, delivering them to the vestingAdmin
-  /// the function then transfers the vested balances to the plan beneficiary. 
+  /// the function then transfers the vested balances to the plan beneficiary.
   /// if the plan has an external voting vault setup, then tokens will be withdrawn from the voting vault rather than this contract address
-  /// finally the function deletes the plan held in storage and burns the NFT.  
+  /// finally the function deletes the plan held in storage and burns the NFT.
   /// @param planId is the id of the plan and NFT
   function _revokePlan(uint256 planId, uint256 revokeTime) internal {
     Plan memory plan = plans[planId];
     require(msg.sender == plan.vestingAdmin, '!vestingAdmin');
-    require(revokeTime >= block.timestamp, "!past revoke");
+    require(revokeTime >= block.timestamp, '!past revoke');
     (uint256 balance, uint256 remainder, ) = planBalanceOf(planId, block.timestamp, revokeTime);
     require(remainder > 0, '!Remainder');
     address holder = ownerOf(planId);
-    delete plans[planId];
-    _burn(planId);
+    if (balance == 0) {
+      delete plans[planId];
+      _burn(planId);
+      delete votingVaults[planId];
+    } else {
+      plans[planId].amount = balance;
+      plans[planId].vestingAdmin = address(0);
+    }
     address vault = votingVaults[planId];
     if (vault == address(0)) {
       TransferHelper.withdrawTokens(plan.token, msg.sender, remainder);
-      TransferHelper.withdrawTokens(plan.token, holder, balance);
     } else {
-      delete votingVaults[planId];
       VotingVault(vault).withdrawTokens(msg.sender, remainder);
-      VotingVault(vault).withdrawTokens(holder, balance);
     }
     emit PlanRevoked(planId, balance, remainder);
   }
 
   /****INTERNAL VOTING FUNCTIONS*********************************************************************************************************************************************/
 
-  /// @notice the internal function to setup a voting vault. 
+  /// @notice the internal function to setup a voting vault.
   /// @dev this will check that no voting vault exists already and then deploy a new voting vault contract
   // during the constructor setup of the voting vault, it will auto delegate the voting vault address to whatever the existing delegate of the vesting plan holder has delegated to
   // if it has not delegated yet, it will self-delegate the tokens
   /// then transfer the tokens remaining in the vesting plan to the voting vault physically
   /// @param planId is the id of the vesting plan and NFT
   function _setupVoting(uint256 planId) internal returns (address) {
-    require(ownerOf(planId) == msg.sender, '!owner');
+    require(_isApprovedDelegatorOrOwner(msg.sender, planId), '!delegator');
     require(votingVaults[planId] == address(0), 'exists');
     Plan memory plan = plans[planId];
-    VotingVault vault = new VotingVault(plan.token, msg.sender);
+    VotingVault vault = new VotingVault(plan.token, ownerOf(planId));
     votingVaults[planId] = address(vault);
     TransferHelper.withdrawTokens(plan.token, address(vault), plan.amount);
     emit VotingVaultCreated(planId, address(vault));
@@ -291,7 +289,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   /// @param planId is the id of the vesting plan and NFT
   /// @param delegatee is the address of the delegatee where the tokens in the voting vault will be delegated to
   function _delegate(uint256 planId, address delegatee) internal {
-    require(ownerOf(planId) == msg.sender, '!owner');
+    require(_isApprovedDelegatorOrOwner(msg.sender, planId), '!delegator');
     address vault = votingVaults[planId];
     if (votingVaults[planId] == address(0)) {
       vault = _setupVoting(planId);
@@ -302,7 +300,7 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
   /****VIEW VOTING FUNCTIONS*********************************************************************************************************************************************/
 
   /// @notice this function will pull all of the unclaimed tokens for a specific holder across all of their plans, based on a single ERC20 token
-  /// very useful for snapshot voting, and other view functionalities. This aggregates all balances, including any in voting vaults. 
+  /// very useful for snapshot voting, and other view functionalities. This aggregates all balances, including any in voting vaults.
   /// @param holder is the address of the beneficiary who owns the vesting plan(s)
   /// @param token is the ERC20 address of the token that is stored across the vesting plans
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
@@ -318,14 +316,21 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
 
   /****NFT FRANSFER SPECIAL OVERRIDE FUNCTIONS*********************************************************************************************************************************************/
 
+  function toggleAdminTransferOBO(uint256 planId, bool transferable) external nonReentrant {
+    require(msg.sender == ownerOf(planId), '!owner');
+    plans[planId].adminTransferOBO = transferable;
+    emit PlanVestingAdminTransferToggle(planId, transferable);
+  }
+
+
   /// @notice special function to transfer an NFT that overrides the normal ERC721 transferFrom function.
-  /// this function lets a vestingAdmin of a plan transfer the NFT on behalf of a the holder of an NFT. 
-  /// the vesting plan must have the adminTransferOBO toggle turned on to true for this function to be called. 
-  /// this functin cannot be called by the owner / beneficiary of the NFT and vesting plan. 
+  /// this function lets a vestingAdmin of a plan transfer the NFT on behalf of a the holder of an NFT.
+  /// the vesting plan must have the adminTransferOBO toggle turned on to true for this function to be called.
+  /// this functin cannot be called by the owner / beneficiary of the NFT and vesting plan.
   /// the to address cannot be the vestingAdmin address
-  /// @param from is the address the NFT and plan is transferred from
-  /// @param to is the address where the NFT and plan is being transferred to
-  /// @param tokenId is the NFT tokenID, the same as the planId to be transferred
+  ///  @param from is the address the NFT and plan is transferred from
+  ///  @param to is the address where the NFT and plan is being transferred to
+  ///  @param tokenId is the NFT tokenID, the same as the planId to be transferred
   function transferFrom(address from, address to, uint256 tokenId) public override(IERC721, ERC721) {
     require(plans[tokenId].adminTransferOBO, '!transferrable');
     require(to != plans[tokenId].vestingAdmin, '!transfer to admin');
@@ -334,8 +339,9 @@ contract VotingTokenVestingPlans is ERC721Enumerable, VestingStorage, Reentrancy
     emit PlanTransferredByVestingAdmin(tokenId, from, to);
   }
 
-  /// @notice vesting plans are not transferable, with the exception of the above method. 
+  /// @notice vesting plans are not transferable, with the exception of the above method.
   function _safeTransfer(address from, address to, uint256 tokenId, bytes memory data) internal override {
     revert('!transferrable');
   }
+
 }

@@ -89,7 +89,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     uint256 balance = balanceOf(msg.sender);
     uint256[] memory planIds = new uint256[](balance);
     for (uint256 i; i < balance; i++) {
-      uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
+      uint256 planId = tokenOfOwnerByIndex(msg.sender, i);
       planIds[i] = planId;
     }
     _redeemPlans(planIds, block.timestamp);
@@ -175,14 +175,15 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   function delegateAll(address token, address delegatee) external nonReentrant {
     uint256 balance = balanceOf(msg.sender);
     for (uint256 i; i < balance; i++) {
-      uint256 planId = _tokenOfOwnerByIndex(msg.sender, i);
+      uint256 planId = tokenOfOwnerByIndex(msg.sender, i);
       if (plans[planId].token == token) _delegateToken(delegatee, planId);
     }
   }
 
-  function transferAndDelegate(uint256 planId, address from, address to, address delegatee) external virtual nonReentrant {
-    transferFrom(from, to, planId);
-    _transferDelegate(delegatee, planId);
+
+  function transferAndDelegate(uint256 planId, address from, address to) external virtual nonReentrant {
+    safeTransferFrom(from, to, planId);
+    _transferDelegate(to, planId);
   }
 
   /****CORE INTERNAL FUNCTIONS*********************************************************************************************************************************************/
@@ -357,7 +358,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   function lockedBalances(address holder, address token) external view returns (uint256 lockedBalance) {
     uint256 holdersBalance = balanceOf(holder);
     for (uint256 i; i < holdersBalance; i++) {
-      uint256 planId = _tokenOfOwnerByIndex(holder, i);
+      uint256 planId = tokenOfOwnerByIndex(holder, i);
       Plan memory plan = plans[planId];
       if (token == plan.token) {
         lockedBalance += plan.amount;

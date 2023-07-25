@@ -36,14 +36,14 @@ module.exports = () => {
     period = C.DAY;
     await bl.createPlan(a.address, token.address, amount, start, cliff, rate, period);
     await bvl.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-    await expect(bl.connect(a).transferFrom(a.address, b.address, '1')).to.be.revertedWith('Not transferrable');
-    await expect(bvl.connect(a).transferFrom(a.address, b.address, '1')).to.be.revertedWith('Not transferrable');
+    await expect(bl.connect(a).transferFrom(a.address, b.address, '1')).to.be.revertedWith('Not Transferable');
+    await expect(bvl.connect(a).transferFrom(a.address, b.address, '1')).to.be.revertedWith('Not Transferable');
     await expect(
       bl.connect(a)['safeTransferFrom(address,address,uint256)'](a.address, b.address, '1')
-    ).to.be.revertedWith('Not transferrable');
+    ).to.be.revertedWith('Not Transferable');
     await expect(
       bvl.connect(a)['safeTransferFrom(address,address,uint256)'](a.address, b.address, '1')
-    ).to.be.revertedWith('Not transferrable');
+    ).to.be.revertedWith('Not Transferable');
   });
   it('transferable lockups can be transferred', async () => {
     await lockups.createPlan(a.address, token.address, amount, start, cliff, rate, period);
