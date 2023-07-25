@@ -21,54 +21,84 @@ const revokeTests = (voting, params) => {
     await token.approve(hedgey.address, C.E18_1000000.mul(1000));
     await dai.approve(hedgey.address, C.E18_1000000.mul(1000));
     await usdc.approve(hedgey.address, C.E18_1000000.mul(1000));
-    let now = await time.latest();
+    let now = BigNumber.from(await time.latest());
     amount = params.amount;
     period = params.period;
     rate = params.rate;
     start = BigNumber.from(now).add(params.start);
     cliff = BigNumber.from(start).add(params.cliff);
     end = C.planEnd(start, amount, rate, period);
-    const preAdminBal = await token.balanceOf(admin.address);
     await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true);
+    now = BigNumber.from(await time.latest());
+    const balances = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(1));
+    const preAdminBal = await token.balanceOf(admin.address);
     expect(await hedgey.revokePlans(['1']))
       .to.emit('PlanRevoked')
       .withArgs('1', 0, amount);
-    expect(await token.balanceOf(admin.address)).to.eq(preAdminBal);
-    expect(await token.balanceOf(hedgey.address)).to.eq(0);
+    expect(await token.balanceOf(admin.address)).to.eq(preAdminBal.add(balances.remainder));
+    expect(await token.balanceOf(hedgey.address)).to.eq(balances.balance);
     expect(await token.balanceOf(a.address)).to.eq(0);
+    if (balances.balance.gt(0)) {
+      expect(await hedgey.balanceOf(a.address)).to.eq(1);
+      expect((await hedgey.plans('1')).amount).to.eq(balances.balance);
+      expect((await hedgey.plans('1')).start).to.eq(start);
+      expect((await hedgey.plans('1')).cliff).to.eq(cliff);
+      expect((await hedgey.plans('1')).rate).to.eq(rate);
+      expect((await hedgey.plans('1')).period).to.eq(period);
+      expect((await hedgey.plans('1')).token).to.eq(token.address);
+      expect(await hedgey.balanceOf(a.address)).to.eq(1);
+      expect(await hedgey.ownerOf('1')).to.eq(a.address);
+      expect((await hedgey.plans('1')).vestingAdmin).to.eq(C.ZERO_ADDRESS);
+      // now A can redeem the plan as normal
+      await hedgey.connect(a).redeemPlans(['1']);
+    }
     expect((await hedgey.plans('1')).amount).to.eq(0);
     expect((await hedgey.plans('1')).start).to.eq(0);
     expect((await hedgey.plans('1')).cliff).to.eq(0);
     expect((await hedgey.plans('1')).rate).to.eq(0);
     expect((await hedgey.plans('1')).period).to.eq(0);
     expect((await hedgey.plans('1')).token).to.eq(C.ZERO_ADDRESS);
-    expect(await hedgey.balanceOf(a.address)).to.eq(0);
+    expect(await token.balanceOf(a.address)).to.eq(balances.balance);
     await expect(hedgey.ownerOf('1')).to.be.reverted;
+    expect(await hedgey.balanceOf(a.address)).to.eq(0);
   });
   it('revokes a plan that has been partially redeemed', async () => {
     await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true);
     // move forward in time to the cliff
-    await time.increaseTo(cliff);
+    if (cliff.gt(await time.latest())) await time.increaseTo(cliff);
     let now = BigNumber.from(await time.latest());
-    let check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(2), now.add(2));
-    let preBal = await token.balanceOf(admin.address);
+    let preAdminBal = await token.balanceOf(admin.address);
+    let preABal = await token.balanceOf(a.address);
+    let check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(1));
+    let checkA = check.balance;
     await hedgey.connect(a).redeemAllPlans();
+    check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(2), now.add(2));
     expect(await hedgey.revokePlans(['2']))
       .to.emit('Planrevoked')
       .withArgs('2', check.balance, check.remainder);
-    expect(await token.balanceOf(a.address)).to.eq(check.balance);
-    expect(await token.balanceOf(admin.address)).to.eq(preBal.add(amount).sub(check.balance));
-    expect(check.balance.add(check.remainder)).to.eq(amount);
+    expect(await token.balanceOf(a.address)).to.eq(preABal.add(checkA));
+    expect(await token.balanceOf(admin.address)).to.eq(preAdminBal.add(check.remainder));
   });
   it('revokes a plan that hasnt been redeemed but has partially vested', async () => {
     // token 3
     let now = BigNumber.from(await time.latest());
     await hedgey.createPlan(b.address, token.address, amount, start, cliff, rate, period, admin.address, true);
-    let check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(2), now.add(2));
+    if (cliff.gt(await time.latest())) await time.increaseTo(cliff.add(period.mul(2)));
+    now = BigNumber.from(await time.latest());
+    let check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(1));
     expect(await hedgey.revokePlans(['3']))
       .to.emit('PlanRevoked')
       .withArgs('3', check.balance, check.remainder);
-    expect(await token.balanceOf(b.address)).to.eq(check.balance);
+    if (check.balance.gt(0)) {
+      const plan = await hedgey.plans('3');
+      expect(plan.amount).to.eq(check.balance);
+      expect(plan.token).to.eq(token.address);
+      expect(plan.rate).to.eq(rate);
+      expect(plan.start).to.eq(start);
+      expect(plan.cliff).to.eq(cliff);
+      expect(plan.period).to.eq(period);
+      expect(plan.vestingAdmin).to.eq(C.ZERO_ADDRESS);
+    }
   });
   it('revokes multiple plans for the same beneficiary and different beneficiaries', async () => {
     let plan4 = await hedgey.createPlan(
@@ -154,16 +184,16 @@ const revokeTests = (voting, params) => {
     let check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(1));
     let preDai = await dai.balanceOf(admin.address);
     await hedgey.revokePlans(['4', '5', '6']);
-    expect(await dai.balanceOf(b.address)).to.eq(check.balance.mul(3));
+    expect(await dai.balanceOf(b.address)).to.eq(0);
     expect(await dai.balanceOf(admin.address)).to.eq(preDai.add(check.remainder.mul(3)));
     now = BigNumber.from(await time.latest());
     let preUsdc = await usdc.balanceOf(admin.address);
     let _check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(1));
     await hedgey.revokePlans(['7', '8', '9', '10']);
-    expect(await usdc.balanceOf(a.address)).to.eq(_check.balance);
-    expect(await usdc.balanceOf(b.address)).to.eq(_check.balance);
-    expect(await usdc.balanceOf(c.address)).to.eq(_check.balance);
-    expect(await usdc.balanceOf(d.address)).to.eq(_check.balance);
+    expect(await usdc.balanceOf(a.address)).to.eq(0);
+    expect(await usdc.balanceOf(b.address)).to.eq(0);
+    expect(await usdc.balanceOf(c.address)).to.eq(0);
+    expect(await usdc.balanceOf(d.address)).to.eq(0);
     expect(await usdc.balanceOf(admin.address)).to.eq(preUsdc.add(_check.remainder.mul(4)));
   });
   it('holder creates a voting vault, and then the plan is revoked', async () => {
@@ -181,8 +211,8 @@ const revokeTests = (voting, params) => {
     let now = BigNumber.from(await time.latest());
     let check = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(1));
     await _hedgey.revokePlans(['1']);
-    expect(await _dai.balanceOf(_a.address)).to.eq(check.balance);
-    expect(await _dai.balanceOf(votingVault)).to.eq(0);
+    expect(await _dai.balanceOf(_a.address)).to.eq(0);
+    expect(await _dai.balanceOf(votingVault)).to.eq(check.balance);
     expect(await _dai.balanceOf(_hedgey.address)).to.eq(0);
     expect(await _dai.balanceOf(_admin.address)).to.eq(preDai.sub(check.balance));
   });
@@ -197,7 +227,16 @@ const revokeTests = (voting, params) => {
       .to.emit('PlanRevoked')
       .withArgs('11', check.balance, check.remainder);
     expect(await usdc.balanceOf(b.address)).to.eq(preBUSDC);
-    expect(await usdc.balanceOf(d.address)).to.eq(preDUSDC.add(check.balance));
+    expect(await usdc.balanceOf(d.address)).to.eq(preDUSDC);
+    if (check.balance.gt(0)) {
+      expect(await hedgey.ownerOf('11')).to.eq(d.address);
+      const plan = await hedgey.plans('11');
+      expect(plan.amount).to.eq(check.balance);
+      expect(plan.rate).to.eq(rate);
+      expect(plan.period).to.eq(period);
+      expect(plan.start).to.eq(start);
+      expect(plan.vestingAdmin).to.eq(C.ZERO_ADDRESS);
+    }
   });
   it('vesting admin changes to a new address and then revokes the plan', async () => {
     await hedgey.createPlan(b.address, usdc.address, amount, start, cliff, rate, period, admin.address, true);
@@ -221,13 +260,35 @@ const revokeTests = (voting, params) => {
       admin.address,
       true
     );
+    const originalEnd = await hedgey.planEnd('13');
     // plan 13
     await time.increase(period.mul(5));
     now = BigNumber.from(await time.latest());
-    const balanceCheck = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), now.add(period));
-    expect(await hedgey.futureRevokePlans(['13'], now.add(period)))
+    const revokeTime = C.bigMax(now.add(period), now.add(C.ONE.mul(100)));
+    const balanceCheck = C.balanceAtTime(start, cliff, amount, rate, period, now.add(1), revokeTime);
+    expect(await hedgey.futureRevokePlans(['13'], revokeTime))
       .to.emit('PlanRevoked')
       .withArgs('13', balanceCheck.balance, balanceCheck.remainder);
+    // there should still be a balance for sure
+    const newEnd = await hedgey.planEnd('13');
+    expect(originalEnd.gte(newEnd)).to.eq(true);
+    const endCheck = C.planEnd(start, balanceCheck.balance, rate, period);
+    expect(newEnd).to.eq(endCheck);
+    expect(await hedgey.ownerOf('13')).to.eq(d.address);
+    let plan = await hedgey.plans('13');
+    expect(plan.amount).to.eq(balanceCheck.balance);
+    expect(plan.rate).to.eq(rate);
+    expect(plan.period).to.eq(period);
+    expect(plan.vestingAdmin).to.eq(C.ZERO_ADDRESS);
+    now = BigNumber.from(await time.latest());
+    // because its in the future, we should not expect that the bene can redeem the entire amount though, only whats available
+    const balances = C.balanceAtTime(start, cliff, balanceCheck.balance, rate, period, now.add(1), now.add(1));
+    await hedgey.connect(d).redeemPlans(['13']);
+    plan = await hedgey.plans('13');
+    expect(plan.amount).to.eq(balances.remainder);
+    expect(plan.rate).to.eq(rate);
+    expect(plan.period).to.eq(period);
+    expect(plan.vestingAdmin).to.eq(C.ZERO_ADDRESS);
   });
   it('revokes a plan before it has started', async () => {
     let now = BigNumber.from(await time.latest());
@@ -239,6 +300,7 @@ const revokeTests = (voting, params) => {
       .to.emit('PlanRevoked')
       .withArgs('14', 0, amount);
   });
+  it('compares two plans where one is revoked on the end date of another to ensure balances are the same', async () => {});
 };
 
 const revokeErrorTests = (voting) => {
