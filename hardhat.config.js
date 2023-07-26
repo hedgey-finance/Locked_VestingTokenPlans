@@ -26,11 +26,11 @@ module.exports = {
   networks: {
     sepolia: {
       url: process.env.SEPOLIA_URL,
-      accounts: [process.env.SEPOLIA_PRIVATE_KEY],
+      accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY],
     },
     goerli: {
       url: process.env.GOERLI_URL,
-      accounts: [process.env.GOERLI_PRIVATE_KEY],
+      accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY],
     },
     mainnet: {
       url: process.env.MAINNET_URL,

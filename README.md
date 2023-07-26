@@ -65,15 +65,30 @@ npx hardhat run scripts/deploy.js --network <network-name>
 ```
 
 ## Testnet Deployments
+# Sepolia Network:   
+TokenVestingPlans: `0xF5b3b163B0DfDF3C4Be9265aE17C1915d9a15872`  
+VotingTokenVestingPlans: `0x4F0AA7Ce4C3d94b6256D109CaF6e843F78B3Ef96`
 
+TokenLockupPlans: `0x3eB5A6935A68190f74e981092BDcCf1454646446`  
+VotingTokenLockupPlans: `0xB82b292C9e33154636fe8839fDb6d4081Da5c359`  
+
+TokenLockupPlans_Bound: `0x90bA665860E1F9934F0cF2575eB8eCac2E0E17Af`  
+VotingTokenLockupPlans_Bound: `0x2cE4DC254a4B48824e084791147Ff7220F1A08a7`  
+
+BatchPlaner: `0xd8B085f666299E52f24e637aB1076ba5C2c38045`  
+ClaimCampaigns: `0x46fdC2f4bA2Af46A50e610044eB35Fb0304F0aec`  
+
+# Goerli Network 
+TokenVestingPlans: `0x3eB5A6935A68190f74e981092BDcCf1454646446`  
+VotingTokenVestingPlans: `0xB82b292C9e33154636fe8839fDb6d4081Da5c359`
+
+TokenLockupPlans: `0x90bA665860E1F9934F0cF2575eB8eCac2E0E17Af`  
+VotingTokenLockupPlans: `0x2cE4DC254a4B48824e084791147Ff7220F1A08a7`  
+
+TokenLockupPlans_Bound: `0xd8B085f666299E52f24e637aB1076ba5C2c38045`  
+VotingTokenLockupPlans_Bound: `0xc6229b2D6F3948d3500a161Ef0c586267dc3Ac43`  
+
+BatchPlaner: `0x3Ef93dDE3F8e5dA878E99d7125d1C7434FB07c54`    
+ClaimCampaigns: `0xB163e84188005b231467e734cEE1262BC882DF09`  
 
 ## Mainnet Deployments
-
-
-## Updates during Audit added to code 
-- Revoke does not distribute tokens out to the recipient immediately, they are left with a claimable nft with original vest date but cannot be revoked any more
-- Add in functionality to transferAndDelegate in same transaction
-- Add in ability to approve an allowance to delegate (like transfer allowances)
-- Updates to calldata for gas savings
-- Updates to using "holder" instead of msg.sender
-- Using OZ's reccomendation of overridning beforeTransfer functions with the hook override
