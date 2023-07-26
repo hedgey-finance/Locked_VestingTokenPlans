@@ -11,7 +11,7 @@ abstract contract PlanDelegator is ERC721Enumerable {
   mapping(address => mapping(address => bool)) private _approvedOperatorDelegators;
 
   // events
-  event DelegatorApproved(address owner, address delegator, uint256 id);
+  event DelegatorApproved(address owner, address delegator, uint256 indexed id);
   event ApprovalForAllDelegation(address owner, address operator, bool approved);
 
   function approveDelegator(address delegator, uint256 planId) public virtual {

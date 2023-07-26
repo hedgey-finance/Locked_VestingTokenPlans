@@ -278,10 +278,10 @@ contract TokenVestingPlans is ERC721Delegate, VestingStorage, ReentrancyGuard, U
 
   /****NFT FRANSFER SPECIAL OVERRIDE FUNCTIONS*********************************************************************************************************************************************/
 
-  function toggleAdminTransferOBO(uint256 planId, bool transferable) external nonReentrant {
+  function toggleAdminTransferOBO(uint256 planId, bool transferrable) external nonReentrant {
     require(msg.sender == ownerOf(planId), '!owner');
-    plans[planId].adminTransferOBO = transferable;
-    emit PlanVestingAdminTransferToggle(planId, transferable);
+    plans[planId].adminTransferOBO = transferrable;
+    emit PlanVestingAdminTransferToggle(planId, transferrable);
   }
   ///  @notice special function to transfer an NFT that overrides the normal ERC721 transferFrom function.
   /// this function lets a vestingAdmin of a plan transfer the NFT on behalf of a the holder of an NFT. 
