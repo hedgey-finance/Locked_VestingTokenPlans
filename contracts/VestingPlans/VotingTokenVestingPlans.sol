@@ -246,7 +246,6 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
     require(revokeTime >= block.timestamp, '!past revoke');
     (uint256 balance, uint256 remainder, ) = planBalanceOf(planId, block.timestamp, revokeTime);
     require(remainder > 0, '!Remainder');
-    address holder = ownerOf(planId);
     if (balance == 0) {
       delete plans[planId];
       _burn(planId);
