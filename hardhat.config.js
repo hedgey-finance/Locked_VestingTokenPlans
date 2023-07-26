@@ -128,6 +128,14 @@ module.exports = {
           apiURL: 'https://api.bobascan.com/',
           browserURL: 'https://bobascan.com'
         }
+      },
+      {
+        network: "celo",
+        chainId: '42220',
+        urls: {
+          apiURL: 'https://api.celoscan.io/',
+          browserURL: 'https://celoscan.io/',
+        }
       }
     ],
     apiKey: {
@@ -146,7 +154,7 @@ module.exports = {
       aurora: process.env.AURORA_APIKEY,
       // oec: process.env.OEC_APIKEY,
       // evmos: process.env.EVMOS_APIKEY,
-      // celo: process.env.CELO_APIKEY,
+      celo: process.env.CELO_APIKEY,
     },
   },
 };

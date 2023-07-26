@@ -1,4 +1,6 @@
-const { ethers } = require('hardhat');
+// const { ethers, run } = require('hardhat');
+const { ethers, run } = require('hardhat');
+const { setTimeout } = require("timers/promises");
 
 async function deployNFTContract(artifact, args, uriBase) {
   const Contract = await ethers.getContractFactory(artifact);
@@ -7,6 +9,11 @@ async function deployNFTContract(artifact, args, uriBase) {
   console.log(`new ${artifact} contract deployed to ${contract.address}`);
   let uri = `${uriBase}${contract.address.toLocaleLowerCase()}/`;
   const tx = await contract.updateBaseURI(uri);
+  await setTimeout(10000)
+  await run("verify:verify", {
+    address: contract.address,
+    constructorArguments: args,
+  });
 }
 
 async function deployPeriphery(donationAddress) {
@@ -18,6 +25,14 @@ async function deployPeriphery(donationAddress) {
   const claimer = await Claimer.deploy(donationAddress);
   await claimer.deployed();
   console.log(`new claimer deployed to ${claimer.address}`);
+  await setTimeout(10000)
+  await run("verify:verify", {
+    address: claimer.address,
+    constructorArguments: [donationAddress],
+  });
+  await run("verify:verify", {
+    address: planner.address,
+  });
 }
 
 async function deployAll(artifacts, args, baseURI, donationAddress) {
@@ -46,4 +61,5 @@ const args = [
 const uri = 'https://nft.hedgey.finance/ethereum';
 const donationAddress = '0x38e5f5c8e29044756aA3c1f10F4F3c11455b23Ea';
 
-deployAll(artifacts, args, uri, donationAddress);
+// deployAll(artifacts, args, uri, donationAddress);
+// deployPeriphery(donationAddress);
