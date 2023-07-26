@@ -9,7 +9,7 @@ async function deployNFTContract(artifact, args, uriBase) {
   console.log(`new ${artifact} contract deployed to ${contract.address}`);
   let uri = `${uriBase}${contract.address.toLocaleLowerCase()}/`;
   const tx = await contract.updateBaseURI(uri);
-  await setTimeout(10000)
+  await setTimeout(8000)
   await run("verify:verify", {
     address: contract.address,
     constructorArguments: args,
@@ -25,7 +25,7 @@ async function deployPeriphery(donationAddress) {
   const claimer = await Claimer.deploy(donationAddress);
   await claimer.deployed();
   console.log(`new claimer deployed to ${claimer.address}`);
-  await setTimeout(10000)
+  await setTimeout(8000)
   await run("verify:verify", {
     address: claimer.address,
     constructorArguments: [donationAddress],
@@ -35,9 +35,10 @@ async function deployPeriphery(donationAddress) {
   });
 }
 
-async function deployAll(artifacts, args, baseURI, donationAddress) {
+async function deployAll(artifacts, args, uri, network, donationAddress) {
+  const uriBase = `${uri}${network}`;
   for (let i = 0; i < artifacts.length; i++) {
-    await deployNFTContract(artifacts[i], args[i], baseURI);
+    await deployNFTContract(artifacts[i], args[i], uriBase);
   }
   deployPeriphery(donationAddress);
 }
@@ -58,8 +59,8 @@ const args = [
   ['Bound-TokenLockupPlans', 'B-TLP'],
   ['Bound-VotingTokenLockupPlans', 'B-VTLP'],
 ];
-const uri = 'https://nft.hedgey.finance/ethereum';
-const donationAddress = '0x38e5f5c8e29044756aA3c1f10F4F3c11455b23Ea';
+const uri = 'https://nft.hedgey.finance/';
+const network = 'ethereum/'
+const donationAddress = '0x0000000000000000000000';
 
-// deployAll(artifacts, args, uri, donationAddress);
-// deployPeriphery(donationAddress);
+deployAll(artifacts, args, uri, network, donationAddress);
