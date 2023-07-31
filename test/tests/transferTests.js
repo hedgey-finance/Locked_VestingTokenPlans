@@ -44,6 +44,13 @@ module.exports = () => {
     await expect(
       bvl.connect(a)['safeTransferFrom(address,address,uint256)'](a.address, b.address, '1')
     ).to.be.revertedWith('Not Transferable');
+    await time.increase(100);
+    await bl.connect(a).redeemPlans(['1']);
+    await bvl.connect(a).redeemPlans(['1']);
+    await bl.connect(a).segmentPlan(1, [C.E18_10]);
+    await bvl.connect(a).segmentPlan(1, [C.E18_10]);
+    await bvl.connect(a).delegate(1, b.address);
+    await bl.connect(a).delegate(1, b.address);
   });
   it('transferable lockups can be transferred', async () => {
     await lockups.createPlan(a.address, token.address, amount, start, cliff, rate, period);
