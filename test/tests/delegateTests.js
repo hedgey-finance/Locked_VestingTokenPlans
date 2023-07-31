@@ -135,6 +135,7 @@ module.exports = (vesting, params) => {
       await hedgey.connect(a).approveDelegator(b.address, '4');
       await hedgey.connect(a).transferFrom(a.address, d.address, '4');
       await expect(hedgey.connect(b).delegate('4', b.address)).to.be.revertedWith('!delegator');
+      expect(await hedgey.getApprovedDelegator(4)).to.eq(C.ZERO_ADDRESS);
     }
   });
   it('wallet D transfers a token with delegation, and the token transfers and delegation gets transferred to new wallet', async () => {

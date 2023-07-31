@@ -299,6 +299,15 @@ const votingVaultDelegatorTests = (vesting, params) => {
     expect(await token.delegates(vv1)).to.eq(c.address);
     expect(await token.delegates(vv2)).to.eq(b.address);
   });
+  it('delegate approved is removed when token is transferred', async () => {
+    await hedgey.connect(a).approveDelegator(b.address, '2');
+    expect(await hedgey.getApprovedDelegator(2)).to.eq(b.address);
+    vesting
+      ? await hedgey.connect(admin).transferFrom(a.address, c.address, '2')
+      : await hedgey.connect(a).transferFrom(a.address, c.address, 2);
+    expect(await hedgey.getApprovedDelegator(2)).to.eq(C.ZERO_ADDRESS);
+    await expect(hedgey.connect(b).delegate(2, b.address)).to.be.revertedWith('!delegator');
+  });
 }
 
 const votingVaultErrorTests = (vesting) => {
@@ -328,7 +337,7 @@ const votingVaultErrorTests = (vesting) => {
     vesting
       ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)
       : await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-    await expect(hedgey.connect(b).setupVoting('1')).to.be.revertedWith('!owner');
+    await expect(hedgey.connect(b).setupVoting('1')).to.be.revertedWith('!delegator');
     await expect(hedgey.connect(b).delegate('1', b.address)).to.be.revertedWith('!delegator');
     await expect(hedgey.connect(b).delegatePlans(['1'], [b.address])).to.be.revertedWith('!delegator');
   });

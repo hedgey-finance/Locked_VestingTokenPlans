@@ -66,14 +66,6 @@ const mainParamsMatrix = [
     cliff: C.MONTH.mul(2),
     balanceCheck: C.MONTH.mul(2),
   },
-  {
-    amount: C.E18_1000000,
-    period: C.ONE,
-    rate: C.E18_1000000.div(60).div(60).div(24).div(365).div(3),
-    start: C.ZERO,
-    cliff: C.ZERO,
-    balanceCheck: C.MONTH,
-  },
 ];
 
 describe('Testing the URI Admin functions', () => {

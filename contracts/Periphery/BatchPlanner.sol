@@ -38,7 +38,7 @@ contract BatchPlanner {
     address locker,
     address token,
     uint256 totalAmount,
-    Plan[] memory plans,
+    Plan[] calldata plans,
     uint256 period,
     uint8 mintType
   ) external {
@@ -80,7 +80,7 @@ contract BatchPlanner {
     address locker,
     address token,
     uint256 totalAmount,
-    Plan[] memory plans,
+    Plan[] calldata plans,
     uint256 period,
     address vestingAdmin,
     bool adminTransferOBO,

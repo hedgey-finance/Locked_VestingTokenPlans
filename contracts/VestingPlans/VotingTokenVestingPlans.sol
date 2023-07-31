@@ -126,7 +126,12 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
     }
   }
 
+  /// @notice this function allows a vesting admin to revoke a plan with a future date
+  /// @dev different than the revokePlans function this takes an input time that is used for all of the plan revoking, which must be at least the current time stamp or future
+  /// @param planIds is the array of the plan ids to be redeemed. the caller must be the vesting admin for all of the plans.
+  /// @param revokeTime is the future time which the plans will be revoked effectively at
   function futureRevokePlans(uint256[] calldata planIds, uint256 revokeTime) external nonReentrant {
+    require(revokeTime >= block.timestamp, '!past revoke');
     for (uint256 i; i < planIds.length; i++) {
       _revokePlan(planIds[i], revokeTime);
     }
@@ -236,14 +241,17 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
   /// @dev this is called by the external revokePlans function, which inputs the msg.sender as the vestingAdmin and the planId from the inputs
   /// this function checks that the vestingAdmin is the vestingAdmin, and that there is actually a revokable balance.
   /// The function then withdraws the unvested tokens that are revoked, delivering them to the vestingAdmin
-  /// the function then transfers the vested balances to the plan beneficiary.
+  /// the function will not automatically transfer the tokens to the plan beneficiary.
+  /// If the vesting plan has no balance left, because the remainder is the entire amount then it will be burned and deleted
+  /// otherwise the NFT will still exist, but the amount is set to the balance that is still to be vested so it can vest along the same time as its original vesting terms
+  /// but the vestingAdmin is set to 0 address so that it cannot be revoked again or transferred
   /// if the plan has an external voting vault setup, then tokens will be withdrawn from the voting vault rather than this contract address
   /// finally the function deletes the plan held in storage and burns the NFT.
   /// @param planId is the id of the plan and NFT
+  /// @param revokeTime is the time that the plan will be revoked effectively at, which can be in the future but not the past
   function _revokePlan(uint256 planId, uint256 revokeTime) internal {
     Plan memory plan = plans[planId];
     require(msg.sender == plan.vestingAdmin, '!vestingAdmin');
-    require(revokeTime >= block.timestamp, '!past revoke');
     (uint256 balance, uint256 remainder, ) = planBalanceOf(planId, block.timestamp, revokeTime);
     require(remainder > 0, '!Remainder');
     if (balance == 0) {
@@ -313,14 +321,16 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
     }
   }
 
-  /****NFT FRANSFER SPECIAL OVERRIDE FUNCTIONS*********************************************************************************************************************************************/
+  /****NFT FRANSFER SPECIAL FUNCTIONS*********************************************************************************************************************************************/
 
+  /// @notice a function for the owner of a vesting plan to toggle on or off the adminTransferOBO boolean
+  /// @param planId is the id of the vesting plan
+  /// @param transferrable is the boolean true or false that updates the plan struct for adminTransferOBO
   function toggleAdminTransferOBO(uint256 planId, bool transferrable) external nonReentrant {
     require(msg.sender == ownerOf(planId), '!owner');
     plans[planId].adminTransferOBO = transferrable;
     emit PlanVestingAdminTransferToggle(planId, transferrable);
   }
-
 
   /// @notice special function to transfer an NFT that overrides the normal ERC721 transferFrom function.
   /// this function lets a vestingAdmin of a plan transfer the NFT on behalf of a the holder of an NFT.
@@ -342,5 +352,4 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
   function _safeTransfer(address from, address to, uint256 tokenId, bytes memory data) internal override {
     revert('!transferrable');
   }
-
 }

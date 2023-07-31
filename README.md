@@ -55,10 +55,8 @@ npx hardhat compile
 npx hardhat test
 ```
 
-There are 1038 Tests that should all pass. You can run ```npx hardhat coverage``` for the coverage report, however it seems to be failing as it returns 0% as if none of the tests ran any of the functions on the smart contracts. 
-
 ## Deployment
-To deploy the contracts you should create a .env file, and add your private keys, network rpc URL, and etherscan API Key. Update the deploy.js file in the /scripts folder to deploy the desired contracts, and update the constructor argument parameters with the desired ERC721 Collection Name and Symbol. Then you can run in the terminal the hardhat deployer (note it doesn't work for all networks, some EVMs are not supported by hardhat).
+To deploy the contracts you should create a .env file, and add your private keys, network rpc URL, and etherscan API Key. Update the deploy.js file in the /scripts folder to deploy the desired contracts, and update the constructor argument parameters with the desired ERC721 Collection Name and Symbol. The deploy script will deploy and verify all of the files in a single function call, for a given network that supports the automated hardhat verification step. 
 
 ``` bash
 npx hardhat run scripts/deploy.js --network <network-name>

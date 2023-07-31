@@ -89,4 +89,22 @@ module.exports = () => {
       voteVesting.connect(b)['safeTransferFrom(address,address,uint256)'](a.address, b.address, '1')
     ).to.be.revertedWith('!transferrable');
   });
+  it('recipient of a plan can toggle on and off the transfer OBO', async () => {
+    let tx = await vesting.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true);
+    let events = (await tx.wait()).events;
+    let tokenId = events[events.length - 1].args.id;
+    expect(await vesting.connect(a).toggleAdminTransferOBO(tokenId, false)).to.emit('PlanVestingAdminTransferToggle').withArgs(tokenId, false);
+    await expect(vesting.connect(admin).transferFrom(a.address, b.address, tokenId)).to.be.revertedWith('!transferrable');
+    expect(await vesting.connect(a).toggleAdminTransferOBO(tokenId, true)).to.emit('PlanVestingAdminTransferToggle').withArgs(tokenId, true);
+    await vesting.connect(admin).transferFrom(a.address, b.address, tokenId);
+    expect(await vesting.ownerOf(tokenId)).to.eq(b.address);
+    tx = await voteVesting.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true);
+    events = (await tx.wait()).events;
+    tokenId = events[events.length - 1].args.id;
+    expect(await voteVesting.connect(a).toggleAdminTransferOBO(tokenId, false)).to.emit('PlanVestingAdminTransferToggle').withArgs(tokenId, false);
+    await expect(voteVesting.connect(admin).transferFrom(a.address, b.address, tokenId)).to.be.revertedWith('!transferrable');
+    expect(await voteVesting.connect(a).toggleAdminTransferOBO(tokenId, true)).to.emit('PlanVestingAdminTransferToggle').withArgs(tokenId, true);
+    await voteVesting.connect(admin).transferFrom(a.address, b.address, tokenId);
+    expect(await voteVesting.ownerOf(tokenId)).to.eq(b.address);
+  })
 };

@@ -180,7 +180,6 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
     }
   }
 
-
   function transferAndDelegate(uint256 planId, address from, address to) external virtual nonReentrant {
     safeTransferFrom(from, to, planId);
     _transferDelegate(to, planId);
@@ -213,12 +212,7 @@ contract TokenLockupPlans is ERC721Delegate, LockupStorage, ReentrancyGuard, URI
   /// @param remainder is the amount of tokens that are still lcoked in the plan, and will be the new amount in the plan storage
   /// @param latestUnlock is the most recent timestamp for when redemption occured. Because periods may be longer than 1 second,
   /// the latestUnlock time may be the current block time, or the timestamp of the most recent period timestamp
-  function _redeemPlan(
-    uint256 planId,
-    uint256 balance,
-    uint256 remainder,
-    uint256 latestUnlock
-  ) internal {
+  function _redeemPlan(uint256 planId, uint256 balance, uint256 remainder, uint256 latestUnlock) internal {
     require(ownerOf(planId) == msg.sender, '!owner');
     address token = plans[planId].token;
     if (remainder == 0) {

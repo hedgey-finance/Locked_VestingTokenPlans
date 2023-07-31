@@ -300,7 +300,9 @@ const revokeTests = (voting, params) => {
       .to.emit('PlanRevoked')
       .withArgs('14', 0, amount);
   });
-  it('compares two plans where one is revoked on the end date of another to ensure balances are the same', async () => {});
+  it('compares two plans where one is revoked on the end date of another to ensure balances are the same', async () => {
+    
+  });
 };
 
 const revokeErrorTests = (voting) => {
