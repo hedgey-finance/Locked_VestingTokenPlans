@@ -123,10 +123,10 @@ Bound-VotingTokenLockupPlans: `0xdE8465D44eBfC761Ee3525740E06C916886E1aEB`
 
 BatchPlanner: `0x3466EB008EDD8d5052446293D1a7D212cb65C646`
 
-ClaimCampaigns: `0x1E9FFaA25d5F8206c697c92BCdee9FA16455CF94`
+ClaimCampaigns: `0x1E9FFaA25d5F8206c697c92BCdee9FA16455CF94`  
 
 
-  
+    
 
 **zkSync Era Mainnet has separate contract addresses: **
 
