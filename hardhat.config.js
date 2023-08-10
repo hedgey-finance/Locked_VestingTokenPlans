@@ -3,8 +3,7 @@ require('@nomiclabs/hardhat-waffle');
 require('hardhat-gas-reporter');
 require('solidity-coverage');
 require('hardhat-deploy');
-require("dotenv").config();
-
+require('dotenv').config();
 
 module.exports = {
   solidity: {
@@ -32,111 +31,128 @@ module.exports = {
       url: process.env.GOERLI_URL,
       accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY],
     },
+    optimisticGoerli: {
+      url: process.env.OPTIMISTIC_GOERLI_URL,
+      accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+      gasPrice: 2000000000,
+    },
     mainnet: {
       url: process.env.MAINNET_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     gnosis: {
       url: process.env.GNOSIS_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.GNOSIS_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     arbitrumOne: {
       url: process.env.ARBITRUM_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.ARBITRUM_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     polygon: {
       url: process.env.POLYGON_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.POLYGON_CHAINID,
-      gasPrice: 200000000000,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+      gasPrice: 130000000000,
     },
     opera: {
       url: process.env.FANTOM_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.FANTOM_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     avalanche: {
       url: process.env.AVALANCHE_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.AVALANCHE_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     bsc: {
       url: process.env.BSC_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.BSC_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     optimisticEthereum: {
       url: process.env.OPTIMISM_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.OPTIMISM_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     harmony: {
       url: process.env.HARMONY_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.HARMONY_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     boba: {
       url: process.env.BOBA_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.BOBA_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     aurora: {
       url: process.env.AURORA_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.AURORA_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     oec: {
       url: process.env.OEC_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.OEC_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     evmos: {
       url: process.env.EVMOS_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.EVMOS_CHAINID,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     celo: {
       url: process.env.CELO_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY],
-      //chainId: process.env.CELO_CHAINID,
-    }
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
+    base: {
+      url: process.env.BASE_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+      gasPrice: 2000000000,
+    },
+    mantle: {
+      url: process.env.MANTLE_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
   },
   etherscan: {
     customChains: [
       {
-        network: "gnosis",
-        chainId: process.env.GNOSIS_CHAINID,
+        network: 'gnosis',
+        chainId: 100,
         urls: {
-          apiURL: "https://api.gnosisscan.io/api",
-          browserURL: "https://gnosisscan.io/", 
-        }
+          apiURL: 'https://api.gnosisscan.io/api',
+          browserURL: 'https://gnosisscan.io/',
+        },
       },
       {
-        network: "harmony",
-        chainId: process.env.HARMONY_CHAINID,
+        network: 'boba',
+        chainId: 288,
         urls: {
-          browserURL: "https://explorer.aurora.dev/",
-          apiURL: ''
-        }
+          apiURL: 'https://api.bobascan.com/api',
+          browserURL: 'https://bobascan.com',
+        },
       },
       {
-        network: "boba",
-        chainId: process.env.BOBA_CHAINID,
+        network: 'celo',
+        chainId: 42220,
         urls: {
-          apiURL: 'https://api.bobascan.com/',
-          browserURL: 'https://bobascan.com'
-        }
-      },
-      {
-        network: "celo",
-        chainId: '42220',
-        urls: {
-          apiURL: 'https://api.celoscan.io/',
+          apiURL: 'https://api.celoscan.io/api',
           browserURL: 'https://celoscan.io/',
-        }
-      }
+        },
+      },
+      {
+        network: 'mantle',
+        chainId: 5000,
+        urls: {
+          apiURL: 'https://explorer.mantle.xyz/api',
+          browserURL: 'https://explorer.mantle.xyz/',
+        },
+      },
+      {
+        network: 'base',
+        chainId: 8453,
+        urls: {
+          apiURL: 'https://api.basescan.org/api',
+          browserURL: 'https://basescan.org/',
+        },
+      },
+      {
+        network: 'aurora',
+        chainId: 1313161554,
+        urls: {
+          apiURL: 'https://explorer.mainnet.aurora.dev/api',
+          browserURL: 'https://explorer.aurora.dev/',
+        },
+      },
     ],
     apiKey: {
       sepolia: process.env.ETHERSCAN_APIKEY,
@@ -152,9 +168,12 @@ module.exports = {
       harmony: process.env.HARMONY_APIKEY,
       boba: process.env.BOBA_APIKEY,
       aurora: process.env.AURORA_APIKEY,
-      // oec: process.env.OEC_APIKEY,
-      // evmos: process.env.EVMOS_APIKEY,
+      oec: process.env.OEC_APIKEY,
+      evmos: process.env.EVMOS_APIKEY,
       celo: process.env.CELO_APIKEY,
+      optimisticGoerli: process.env.OPTIMISTICGOERLI_APIKEY,
+      base: process.env.BASE_APIKEY,
+      mantle: process.env.MANTLE_APIKEY,
     },
   },
 };
