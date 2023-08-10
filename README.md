@@ -90,3 +90,36 @@ BatchPlaner: `0x3Ef93dDE3F8e5dA878E99d7125d1C7434FB07c54`
 ClaimCampaigns: `0xB163e84188005b231467e734cEE1262BC882DF09`  
 
 ## Mainnet Deployments
+
+The following networks have been deployed to mainnet contracts, at the same address for each network:   
+- Ethereum Mainnet  
+- ArbitrumOne  
+- Optimism
+- Celo  
+- Polygon  
+- Fantom (Opera)  
+- Avalanche C-Chain  
+- Gnosis Chain
+- BASE
+- Aurora
+- Binance Smart Chain (BSC)
+- Boba
+- Harmony One
+- Evmos
+- OEC (OkEx Chain)
+
+TokenVestingPlans: `0xd240f76C57fB18196A864B8b06E9b168C98c4524`
+
+VotingTokenVestingPlans: `0x1b03D75094884714973f22867359dE4b81AF2F00`
+
+TokenLockupPlans: `0x1B24CAe1De08ec8b3Ce0C55F9eE30Db747fd72aE`
+
+VotingTokenLockupPlans: `0x73cD8626b3cD47B009E68380720CFE6679A3Ec3D`
+
+Bound-TokenLockupPlans: `0x040A92F07B65E6C2C10FFfaf91DdC50F3d7b4319`
+
+Bound-VotingTokenLockupPlans: `0xdE8465D44eBfC761Ee3525740E06C916886E1aEB`
+
+BatchPlanner: `0x3466EB008EDD8d5052446293D1a7D212cb65C646`
+
+ClaimCampaigns: `0x1E9FFaA25d5F8206c697c92BCdee9FA16455CF94`
