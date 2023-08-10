@@ -101,6 +101,7 @@ The following networks have been deployed to mainnet contracts, at the same addr
 - Avalanche C-Chain  
 - Gnosis Chain
 - BASE
+- Mantle
 - Aurora
 - Binance Smart Chain (BSC)
 - Boba
@@ -123,3 +124,22 @@ Bound-VotingTokenLockupPlans: `0xdE8465D44eBfC761Ee3525740E06C916886E1aEB`
 BatchPlanner: `0x3466EB008EDD8d5052446293D1a7D212cb65C646`
 
 ClaimCampaigns: `0x1E9FFaA25d5F8206c697c92BCdee9FA16455CF94`
+
+
+zkSync Era Mainnet has separate contract addresses: 
+
+TokenVestingPlans: `0xCef102fa950eEC13EbcB42D77cfCE3fFC43A235A`
+
+VotingTokenVestingPlans: `0x9D889571aCa1470d8b0e2ae363a6a52F51301d16`
+
+TokenLockupPlans: `0x6ABFF507043e626aB3Cc80d8845cB575E29f0bc4`
+
+VotingTokenLockupPlans: `0xBfCBCa1E26d2403d54E54ec51cb19bc4Da6a6bBf`
+
+Bound-TokenLockupPlans: `0x18E7Ff25521b8c2Aea53dE5941909Bb75b506488`
+
+Bound-VotingTokenLockupPlans: `0xD080fdf3E80EA3AB7e979B5f418fe41C700f8c78`
+
+BatchPlanner: `0xf7a5Fe7b99eFa24456C7b7F20485B507e68361BE`
+
+ClaimCampaigns: `0xfb40B95Ab3903cB7361EED4Fc9D5DC6aC628803E`
