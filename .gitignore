@@ -113,3 +113,5 @@ cache/
 coverage.json
 
 segmentAlgos.js
+
+scripts/tokenDeploy.js
