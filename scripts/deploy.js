@@ -7,9 +7,9 @@ async function deployNFTContract(artifact, args, uriBase) {
   const contract = await Contract.deploy(...args);
   await contract.deployed();
   console.log(`new ${artifact} contract deployed to ${contract.address}`);
-  let uri = `${uriBase}${contract.address.toLocaleLowerCase()}/`;
+  let uri = `${uriBase}${contract.address.toLowerCase()}/`;
   const tx = await contract.updateBaseURI(uri);
-  await setTimeout(8000)
+  await setTimeout(10000)
   await run("verify:verify", {
     address: contract.address,
     constructorArguments: args,
@@ -25,7 +25,7 @@ async function deployPeriphery(donationAddress) {
   const claimer = await Claimer.deploy(donationAddress);
   await claimer.deployed();
   console.log(`new claimer deployed to ${claimer.address}`);
-  await setTimeout(8000)
+  await setTimeout(10000)
   await run("verify:verify", {
     address: claimer.address,
     constructorArguments: [donationAddress],
@@ -59,8 +59,8 @@ const args = [
   ['Bound-TokenLockupPlans', 'B-TLP'],
   ['Bound-VotingTokenLockupPlans', 'B-VTLP'],
 ];
-const uri = 'https://nft.hedgey.finance/';
-const network = 'ethereum/'
-const donationAddress = '0x0000000000000000000000';
+const uri = 'https://dynamic-nft.hedgey.finance/';
+const network = 'palm/'
+const donationAddress = '0x320bcB681CE7023EDfE48aDe9Cf5bf67A11Bcd36';
 
 deployAll(artifacts, args, uri, network, donationAddress);
