@@ -102,6 +102,10 @@ module.exports = {
       url: process.env.MANTLE_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
+    palm: {
+      url: process.env.PALM_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    }
   },
   etherscan: {
     customChains: [
@@ -153,6 +157,14 @@ module.exports = {
           browserURL: 'https://explorer.aurora.dev/',
         },
       },
+      {
+        network: 'palm',
+        chainId: 11297108109,
+        urls: {
+          apiURL: 'https://explorer.palm.io/api',
+          browserURL: 'https://explorer.palm.io/',
+        }
+      }
     ],
     apiKey: {
       sepolia: process.env.ETHERSCAN_APIKEY,
@@ -174,6 +186,7 @@ module.exports = {
       optimisticGoerli: process.env.OPTIMISTICGOERLI_APIKEY,
       base: process.env.BASE_APIKEY,
       mantle: process.env.MANTLE_APIKEY,
+      palm: process.env.PALM_APIKEY,
     },
   },
 };
