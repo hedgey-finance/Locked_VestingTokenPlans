@@ -31,11 +31,11 @@ module.exports = {
       url: process.env.GOERLI_URL,
       accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY],
     },
-    optimisticGoerli: {
-      url: process.env.OPTIMISTIC_GOERLI_URL,
-      accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
-      gasPrice: 2000000000,
-    },
+    // optimisticGoerli: {
+    //   url: process.env.OPTIMISTIC_GOERLI_URL,
+    //   accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    //   gasPrice: 2000000000,
+    // },
     mainnet: {
       url: process.env.MAINNET_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
@@ -93,19 +93,36 @@ module.exports = {
       url: process.env.CELO_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
-    base: {
-      url: process.env.BASE_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
-      gasPrice: 2000000000,
-    },
-    mantle: {
-      url: process.env.MANTLE_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
-    },
+    // base: {
+    //   url: process.env.BASE_URL,
+    //   accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    //   gasPrice: 2000000000,
+    // },
+    // mantle: {
+    //   url: process.env.MANTLE_URL,
+    //   accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    // },
     palm: {
       url: process.env.PALM_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
-    }
+    },
+    tomoChain: {
+      url: process.env.TOMOCHAIN_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
+    pgn: {
+      url: process.env.PGN_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+      gasPrice: 1500000000,
+    },
+    lineaTestnet: {
+      url: process.env.LINEAGOERLI_URL,
+      accounts: [process.env.TOKEN_DEPLOYER],
+    },
+    linea: {
+      url: process.env.LINEA_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
   },
   etherscan: {
     customChains: [
@@ -164,6 +181,46 @@ module.exports = {
           apiURL: 'https://explorer.palm.io/api',
           browserURL: 'https://explorer.palm.io/',
         }
+      },
+      {
+        network: 'pgn',
+        chainId: 424,
+        urls: {
+          apiURL: 'https://explorer.publicgoods.network/api',
+          browserURL: 'https://explorer.publicgoods.network/',
+        }
+      },
+      {
+        network: 'evmos',
+        chainId: 9001,
+        urls: {
+          apiURL: 'https://escan.live/api',
+          browserURL: 'https://escan.live/',
+        }
+      },
+      {
+        network: 'tomochain',
+        chainId: 88,
+        urls: {
+          apiURL: '',
+          browserURL: 'https://tomoscan.io/',
+        }
+      },
+      {
+        network: 'linea',
+        chainId: 59144,
+        urls: {
+         apiURL: 'https://api.lineascan.build/api',
+         browserURL: 'https://lineascan.build/' 
+        }
+      },
+      {
+        network: 'lineaTestnet',
+        chainId: 59140,
+        urls: {
+          apiURL: 'https://api-goerli.lineascan.build/api',
+          browserURL: 'https://goerli.lineascan.build/',
+        }
       }
     ],
     apiKey: {
@@ -180,13 +237,16 @@ module.exports = {
       harmony: process.env.HARMONY_APIKEY,
       boba: process.env.BOBA_APIKEY,
       aurora: process.env.AURORA_APIKEY,
-      oec: process.env.OEC_APIKEY,
+      // oec: process.env.OEC_APIKEY,
       evmos: process.env.EVMOS_APIKEY,
       celo: process.env.CELO_APIKEY,
       optimisticGoerli: process.env.OPTIMISTICGOERLI_APIKEY,
       base: process.env.BASE_APIKEY,
       mantle: process.env.MANTLE_APIKEY,
       palm: process.env.PALM_APIKEY,
+      pgn: process.env.PGN_APIKEY,
+      linea: process.env.LINEA_APIKEY,
+      lineaTestnet: process.env.LINEA_APIKEY,
     },
   },
 };
