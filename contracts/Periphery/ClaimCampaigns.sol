@@ -36,9 +36,9 @@ contract ClaimCampaigns is ReentrancyGuard {
   struct ClaimLockup {
     address tokenLocker;
     uint256 rate;
-    uint256 start;
     uint256 cliff;
     uint256 period;
+    uint256 periods;
   }
 
   /// @notice Campaign is the struct that defines a claim campaign in general. The Campaign is related to a one time use, related to a merkle tree that pre defines all of the wallets and amounts those wallets can claim
@@ -92,6 +92,13 @@ contract ClaimCampaigns is ReentrancyGuard {
   event ClaimLockupCreated(bytes16 indexed id, ClaimLockup claimLockup);
   event CampaignCancelled(bytes16 indexed id);
   event TokensClaimed(bytes16 indexed id, address indexed claimer, uint256 amountClaimed, uint256 amountRemaining);
+  event TokensDonated(
+    bytes16 indexed id,
+    address donationCollector,
+    address token,
+    uint256 amount,
+    address tokenLocker
+  );
 
   constructor(address _donationCollector) {
     donationCollector = _donationCollector;
@@ -137,6 +144,7 @@ contract ClaimCampaigns is ReentrancyGuard {
       } else {
         TransferHelper.withdrawTokens(campaign.token, donationCollector, donation.amount);
       }
+      emit TokensDonated(id, donationCollector, campaign.token, donation.amount, donation.tokenLocker);
     }
     campaigns[id] = campaign;
     emit CampaignStarted(id, campaign);
@@ -180,15 +188,8 @@ contract ClaimCampaigns is ReentrancyGuard {
       } else {
         TransferHelper.withdrawTokens(campaign.token, donationCollector, donation.amount);
       }
+      emit TokensDonated(id, donationCollector, campaign.token, donation.amount, donation.tokenLocker);
     }
-    (, bool valid) = TimelockLibrary.validateEnd(
-      claimLockup.start,
-      claimLockup.cliff,
-      campaign.amount,
-      claimLockup.rate,
-      claimLockup.period
-    );
-    require(valid);
     claimLockups[id] = claimLockup;
     SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), claimLockup.tokenLocker, campaign.amount);
     campaigns[id] = campaign;
@@ -222,6 +223,8 @@ contract ClaimCampaigns is ReentrancyGuard {
       TransferHelper.withdrawTokens(campaign.token, msg.sender, claimAmount);
     } else {
       ClaimLockup memory c = claimLockups[campaignId];
+      uint256 rate = claimAmount / c.periods;
+      uint256 start = c.start == 0 ? block.timestamp : c.start;
       if (campaign.tokenLockup == TokenLockup.Locked) {
         ILockupPlans(c.tokenLocker).createPlan(
           msg.sender,
@@ -229,7 +232,7 @@ contract ClaimCampaigns is ReentrancyGuard {
           claimAmount,
           c.start,
           c.cliff,
-          c.rate,
+          rate,
           c.period
         );
       } else {
@@ -239,7 +242,7 @@ contract ClaimCampaigns is ReentrancyGuard {
           claimAmount,
           c.start,
           c.cliff,
-          c.rate,
+          rate,
           c.period,
           campaign.manager,
           false
