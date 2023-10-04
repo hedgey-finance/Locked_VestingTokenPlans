@@ -33,6 +33,7 @@ contract ClaimCampaigns is ReentrancyGuard {
   /// @param start is the start date when the unlock / vesting begins
   /// @param cliff is the single cliff date for unlocking and vesting plans, when all tokens prior to the cliff remained locked and unvested
   /// @param period is the amount of seconds in each discrete period. A streaming style would have this set to 1, but a period of 1 day would be 86400, tokens only unlock at each discrete period interval
+  /// @param periods is the total number of periods in the lockup, ie term_in_seconds / period.
   struct ClaimLockup {
     address tokenLocker;
     uint256 rate;
@@ -230,7 +231,7 @@ contract ClaimCampaigns is ReentrancyGuard {
           msg.sender,
           campaign.token,
           claimAmount,
-          c.start,
+          start,
           c.cliff,
           rate,
           c.period
@@ -240,7 +241,7 @@ contract ClaimCampaigns is ReentrancyGuard {
           msg.sender,
           campaign.token,
           claimAmount,
-          c.start,
+          start,
           c.cliff,
           rate,
           c.period,
