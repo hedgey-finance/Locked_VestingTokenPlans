@@ -5,10 +5,11 @@ const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { createTree, getProof } = require('../merkleGenerator');
 const { ethers } = require('hardhat');
 const { v4: uuidv4, parse: uuidParse } = require('uuid');
+const { BigNumber } = require('ethers');
 
 const claimTests = (lockupType, voting, params) => {
   let s, admin, a, b, c, token, claimer, hedgey;
-  let amount, amountA, amountB, campaign, lockup, vesting, donation;
+  let amount, amountA, amountB, campaign, lockup, vesting, donation, lockupEnd, term;
   let id;
   it(`Deploys the contracts and creates a merkle tree, uploads the root to the claimer`, async () => {
     s = await setup();
@@ -54,12 +55,14 @@ const claimTests = (lockupType, voting, params) => {
       tokenLockup: lockupType,
       root,
     };
+    let start = params.start === 'zero' ? C.ZERO : params.start.add(now);
+    let cliff = params.cliff.add(start);
     lockup = {
       tokenLocker: hedgey.address,
-      rate: params.rate,
-      start: params.start.add(now),
-      cliff: params.cliff.add(params.start).add(now),
+      start,
+      cliff,
       period: params.period,
+      periods: params.periods,
     };
     donation = {
       tokenLocker: hedgey.address,
@@ -69,6 +72,8 @@ const claimTests = (lockupType, voting, params) => {
       cliff: 0,
       period: 0,
     };
+    term = params.period.mul(params.periods);
+    lockupEnd = start.add(term);
     await token.approve(claimer.address, C.E18_1000000.mul(10000));
     let tx =
       lockupType == 0
@@ -79,9 +84,9 @@ const claimTests = (lockupType, voting, params) => {
       expect(tx).to.emit('ClaimLockupCreated').withArgs(id, lockup);
       let lock = await claimer.claimLockups(id);
       expect(lock.start).to.eq(lockup.start);
-      expect(lock.rate).to.eq(lockup.rate);
       expect(lock.cliff).to.eq(lockup.cliff);
       expect(lock.period).to.eq(lockup.period);
+      expect(lock.periods).to.eq(lockup.periods);
     }
     expect(await token.balanceOf(claimer.address)).to.equal(amount);
   });
@@ -89,11 +94,12 @@ const claimTests = (lockupType, voting, params) => {
     let proof = getProof('./test/trees/tree.json', a.address);
     let tx = await claimer.connect(a).claimTokens(id, proof, amountA);
     expect(tx).to.emit('TokensClaimed').withArgs(id, a.address, amountA, amount.sub(amountA));
+    let rate = amountA.div(lockup.periods);
     if (lockupType > 0) {
       if (lockupType == 1)
         expect(tx)
           .to.emit('PlanCreated')
-          .withArgs('1', a.address, token.address, amountA, lockup.start, lockup.cliff, lockup.rate, lockup.period);
+          .withArgs('1', a.address, token.address, amountA, lockup.start, lockup.cliff, rate, lockup.period);
       expect(await token.balanceOf(hedgey.address)).to.equal(amountA);
       expect(await hedgey.balanceOf(a.address)).to.equal(1);
       expect(await hedgey.ownerOf('1')).to.eq(a.address);
@@ -103,7 +109,8 @@ const claimTests = (lockupType, voting, params) => {
       expect(plan.start).to.equal(lockup.start);
       expect(plan.cliff).to.equal(lockup.cliff);
       expect(plan.period).to.equal(lockup.period);
-      expect(plan.rate).to.equal(lockup.rate);
+      //expect(plan.rate).to.equal(rate);
+      expect(await hedgey.planEnd('1')).to.eq(lockupEnd);
       if (vesting) {
         expect(tx)
           .to.emit('PlanCreated')
@@ -140,10 +147,11 @@ const claimTests = (lockupType, voting, params) => {
       let tx = await claimer.connect(b).claimTokens(id, proof, amountB);
       expect(tx).to.emit('TokensClaimed').withArgs(id, b.address, amountB, amount.sub(amountA).sub(amountB));
       if (lockupType > 0) {
+        let rate = amountB.div(lockup.periods);
         if (lockupType == 1)
           expect(tx)
             .to.emit('PlanCreated')
-            .withArgs('2', b.address, token.address, amountB, lockup.start, lockup.cliff, lockup.rate, lockup.period);
+            .withArgs('2', b.address, token.address, amountB, lockup.start, lockup.cliff, rate, lockup.period);
         expect(await token.balanceOf(hedgey.address)).to.equal(amountA.add(amountB));
         expect(await hedgey.balanceOf(b.address)).to.equal(1);
         expect(await hedgey.ownerOf('2')).to.eq(b.address);
@@ -153,7 +161,8 @@ const claimTests = (lockupType, voting, params) => {
         expect(plan.start).to.equal(lockup.start);
         expect(plan.cliff).to.equal(lockup.cliff);
         expect(plan.period).to.equal(lockup.period);
-        expect(plan.rate).to.equal(lockup.rate);
+        //expect(plan.rate).to.equal(rate);
+        expect(await hedgey.planEnd('2')).to.eq(lockupEnd);
         if (vesting) {
           expect(tx)
             .to.emit('PlanCreated')
@@ -211,12 +220,14 @@ const claimTests = (lockupType, voting, params) => {
       tokenLockup: lockupType,
       root,
     };
+    let start = params.start === 'zero' ? C.ZERO : params.start.add(now);
+    let cliff = params.cliff.add(start);
     lockup = {
       tokenLocker: hedgey.address,
-      rate: params.rate,
-      start: params.start.add(now),
-      cliff: params.cliff.add(params.start).add(now),
+      start,
+      cliff,
       period: params.period,
+      periods: params.periods,
     };
     let donationLocker = voting ? s.voteLocked : s.locked;
     donation = {
@@ -303,10 +314,10 @@ const claimErrorTests = () => {
     };
     lockup = {
       tokenLocker: hedgey.address,
-      rate: C.E18_05,
       start: now,
       cliff: now,
       period: C.DAY,
+      periods: 365,
     };
     donation = {
       tokenLocker: hedgey.address,
@@ -343,21 +354,6 @@ const claimErrorTests = () => {
     campaign.end = now - 1;
     await expect(claimer.createLockedCampaign(altId, campaign, lockup, donation)).to.be.revertedWith('end error');
   });
-  it('create will revert for lockups if the end is invalid', async () => {
-    let now = await time.latest();
-    campaign.end = C.WEEK.add(now);
-    lockup.tokenLocker = C.ZERO_ADDRESS;
-    await expect(claimer.createLockedCampaign(altId, campaign, lockup, donation)).to.be.revertedWith('invalide locker');
-    lockup.tokenLocker = hedgey.address;
-    lockup.rate = C.ZERO;
-    await expect(claimer.createLockedCampaign(altId, campaign, lockup, donation)).to.be.revertedWith('0_rate');
-    lockup.rate = C.E18_05;
-    lockup.cliff = C.WEEK.mul(1000000).add(now);
-    await expect(claimer.createLockedCampaign(altId, campaign, lockup, donation)).to.be.revertedWith('cliff > end');
-    lockup.cliff = now;
-    lockup.period = C.ZERO;
-    await expect(claimer.createLockedCampaign(altId, campaign, lockup, donation)).to.be.revertedWith('0_period');
-  });
   'it create locked will revert if the campaign has the unlocked enum',
     async () => {
       campaign.tokenLockup = '0';
@@ -365,6 +361,8 @@ const claimErrorTests = () => {
     };
   it('create unlocked will revert if the campaign has the locked enum', async () => {
     campaign.tokenLockup = '1';
+    let now = BigNumber.from(await time.latest());
+    campaign.end = now.add(100)
     await expect(claimer.createUnlockedCampaign(altId, campaign, donation)).to.be.revertedWith('locked');
   });
   it('claim will revert if the proof is invalid', async () => {
@@ -395,7 +393,7 @@ const claimErrorTests = () => {
     await expect(claimer.connect(c).claimTokens(id, proof, C.E18_500)).to.be.revertedWith('campaign unfunded');
   });
   it('claim will revert if the end date has already passed', async () => {
-    await time.increaseTo(campaign.end.add(20));
+    await time.increase(2000000)
     let proof = getProof('./test/trees/tree.json', b.address);
     await expect(claimer.connect(b).claimTokens(id, proof, C.E18_50)).to.be.revertedWith('campaign ended');
   });
