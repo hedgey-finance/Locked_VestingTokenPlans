@@ -123,7 +123,7 @@ module.exports = {
   ZERO_ADDRESS: '0x0000000000000000000000000000000000000000',
   DAY: BigNumber.from(60).mul(60).mul(24),
   WEEK: BigNumber.from(60).mul(60).mul(24).mul(7),
-  MONTH: BigNumber.from(60).mul(60).mul(24).mul(30),
+  MONTH: BigNumber.from(2628000),
   bigMin,
   bigMax,
   randomBigNum,
