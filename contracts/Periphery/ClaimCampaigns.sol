@@ -225,7 +225,7 @@ contract ClaimCampaigns is ReentrancyGuard {
         rate = claimAmount / c.periods;
       } else {
         if (claimAmount % (c.periods - 1) == 0) {
-          rate = rate = claimAmount / c.periods + 1;
+          rate = claimAmount / c.periods + 1;
         } else {
           rate = claimAmount / (c.periods - 1);
         }
