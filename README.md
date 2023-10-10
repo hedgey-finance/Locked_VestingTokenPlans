@@ -110,6 +110,7 @@ The following networks have been deployed to mainnet contracts, at the same addr
 - OEC (OkEx Chain)
 - Palm Network
 - Public Goods Network (PGN)  
+- Linea Mainnet  
 
 TokenVestingPlans: `0xd240f76C57fB18196A864B8b06E9b168C98c4524`
 

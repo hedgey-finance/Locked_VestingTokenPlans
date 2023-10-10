@@ -31,11 +31,11 @@ module.exports = {
       url: process.env.GOERLI_URL,
       accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY],
     },
-    // optimisticGoerli: {
-    //   url: process.env.OPTIMISTIC_GOERLI_URL,
-    //   accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
-    //   gasPrice: 2000000000,
-    // },
+    optimisticGoerli: {
+      url: process.env.OPTIMISTIC_GOERLI_URL,
+      accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+      gasPrice: 2000000000,
+    },
     mainnet: {
       url: process.env.MAINNET_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
@@ -93,15 +93,15 @@ module.exports = {
       url: process.env.CELO_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
-    // base: {
-    //   url: process.env.BASE_URL,
-    //   accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
-    //   gasPrice: 2000000000,
-    // },
-    // mantle: {
-    //   url: process.env.MANTLE_URL,
-    //   accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
-    // },
+    base: {
+      url: process.env.BASE_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+      gasPrice: 2000000000,
+    },
+    mantle: {
+      url: process.env.MANTLE_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
     palm: {
       url: process.env.PALM_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
@@ -221,6 +221,14 @@ module.exports = {
           apiURL: 'https://api-goerli.lineascan.build/api',
           browserURL: 'https://goerli.lineascan.build/',
         }
+      },
+      {
+        network: 'oec',
+        chainId: 66,
+        urls: {
+          apiURL: 'https://www.oklink.com/api/explorer/v5/oktc/contract/verify',
+          browserURL: 'https://www.oklink.com/oktc',
+        }
       }
     ],
     apiKey: {
@@ -237,7 +245,7 @@ module.exports = {
       harmony: process.env.HARMONY_APIKEY,
       boba: process.env.BOBA_APIKEY,
       aurora: process.env.AURORA_APIKEY,
-      // oec: process.env.OEC_APIKEY,
+      oec: process.env.OEC_APIKEY,
       evmos: process.env.EVMOS_APIKEY,
       celo: process.env.CELO_APIKEY,
       optimisticGoerli: process.env.OPTIMISTICGOERLI_APIKEY,
