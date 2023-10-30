@@ -254,6 +254,7 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
     require(msg.sender == plan.vestingAdmin, '!vestingAdmin');
     (uint256 balance, uint256 remainder, ) = planBalanceOf(planId, block.timestamp, revokeTime);
     require(remainder > 0, '!Remainder');
+    address vault = votingVaults[planId];
     if (balance == 0) {
       delete plans[planId];
       _burn(planId);
@@ -262,7 +263,6 @@ contract VotingTokenVestingPlans is PlanDelegator, VestingStorage, ReentrancyGua
       plans[planId].amount = balance;
       plans[planId].vestingAdmin = address(0);
     }
-    address vault = votingVaults[planId];
     if (vault == address(0)) {
       TransferHelper.withdrawTokens(plan.token, msg.sender, remainder);
     } else {

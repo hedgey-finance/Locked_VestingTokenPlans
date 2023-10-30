@@ -15,6 +15,7 @@ abstract contract ERC721Delegate is PlanDelegator {
 
   // function for minting should add the token to the delegate and increase the balance
   function _addDelegate(address to, uint256 tokenId) private {
+    require(to != address(0), '!address(0)');
     uint256 length = _delegateBalances[to];
     _delegatedTokens[to][length] = tokenId;
     _delegatedTokensIndex[tokenId] = length;
@@ -25,7 +26,8 @@ abstract contract ERC721Delegate is PlanDelegator {
 
   // function for burning should reduce the balances and set the token mapped to 0x0 address
   function _removeDelegate(uint256 tokenId) private {
-    address from = delegatedTo(tokenId);
+    address from = _delegates[tokenId];
+    require(from != address(0), '!address(0)');
     uint256 lastTokenIndex = _delegateBalances[from] - 1;
     uint256 tokenIndex = _delegatedTokensIndex[tokenId];
     if (tokenIndex != lastTokenIndex) {
@@ -65,7 +67,6 @@ abstract contract ERC721Delegate is PlanDelegator {
 
   function delegatedTo(uint256 tokenId) public view returns (address) {
     address delegate = _delegates[tokenId];
-    require(delegate != address(0), '!address(0)');
     return delegate;
   }
 

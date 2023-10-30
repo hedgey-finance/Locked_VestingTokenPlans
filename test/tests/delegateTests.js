@@ -149,6 +149,24 @@ module.exports = (vesting, params) => {
       expect(await hedgey.ownerOf('4')).to.eq(c.address);
     }
   });
+  it('reverts if the owner tries to delegate to the 0x0 address', async () => {
+    vesting
+      ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)
+      : await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    await expect(hedgey.connect(a).delegate('5', C.ZERO_ADDRESS)).to.be.revertedWith('!address(0)');
+    await expect(hedgey.connect(a).delegateAll(token.address, C.ZERO_ADDRESS)).to.be.revertedWith('!address(0)');
+    await expect(hedgey.connect(a).delegatePlans(['5'], [C.ZERO_ADDRESS])).to.be.revertedWith('!address(0)');
+  });
+  it('reverts if the delegator tries to delegate to the 0x0 address', async () => {
+    await hedgey.connect(a).approveDelegator(b.address, '5');
+    await expect(hedgey.connect(b).delegate('5', C.ZERO_ADDRESS)).to.be.revertedWith('!address(0)');
+    await expect(hedgey.connect(b).delegatePlans(['5'], [C.ZERO_ADDRESS])).to.be.revertedWith('!address(0)');
+  });
+  it('reverts if the operator delegator tries to delegate to the 0x0 address', async () => {
+    await hedgey.connect(a).setApprovalForAllDelegation(c.address, true);
+    await expect(hedgey.connect(c).delegate('5', C.ZERO_ADDRESS)).to.be.revertedWith('!address(0)');
+    await expect(hedgey.connect(c).delegatePlans(['5'], [C.ZERO_ADDRESS])).to.be.revertedWith('!address(0)');
+  })
   it('reverts if the function caller isnt the owner', async () => {
     await expect(hedgey.connect(a).delegate('1', a.address)).to.be.revertedWith('!delegator');
     await expect(hedgey.connect(a).delegatePlans(['1', '2'], [a.address, d.address])).to.be.revertedWith('!delegator');
