@@ -61,7 +61,7 @@ const votingVaultTests = (vesting, params) => {
   });
   it('transfers a plan, the original wallet is still delegate and then new wallet self delegates', async () => {
     // transfer token 2 to c wallet
-    vesting 
+    vesting
       ? await hedgey.transferFrom(a.address, c.address, '2')
       : await hedgey.connect(a).transferFrom(a.address, c.address, '2');
     const vv = await hedgey.votingVaults('2');
@@ -110,128 +110,127 @@ const votingVaultTests = (vesting, params) => {
     expect(await usdc.delegates(await hedgey.votingVaults('10'))).to.eq(d.address);
     expect(await usdc.delegates(await hedgey.votingVaults('11'))).to.eq(d.address);
   });
-    it('segements and delegates voting vault with no voting vault setup for original plan', async () => {
-        let _s = await setup();
-        let locked = _s.voteLocked;
-        await token.approve(locked.address, C.E18_1000000.mul(10000));
-        await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-        expect(await token.balanceOf(locked.address)).to.eq(amount);
-        let segment = amount.div(2);
-        await locked.connect(a).segmentAndDelegatePlans('1', [segment], [c.address]);
-        expect(await locked.votingVaults('1')).to.eq(C.ZERO_ADDRESS);
-        expect(await token.balanceOf(locked.address)).to.eq(amount.sub(segment));
-        let vv = await locked.votingVaults('2');
-        expect(await token.balanceOf(vv)).to.eq(segment);
-        expect(await token.delegates(vv)).to.eq(c.address);
-
-    });
-    it('segments and delegates voting vault with an original voting vault setup', async () => {
-        let _s = await setup();
-        let locked = _s.voteLocked;
-        await token.approve(locked.address, C.E18_1000000.mul(10000));
-        await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-        expect(await token.balanceOf(locked.address)).to.eq(amount);
-        await locked.connect(a).setupVoting('1');
-        expect(await token.balanceOf(locked.address)).to.eq(0);
-        const vv1 = await locked.votingVaults('1');
-        expect(await token.balanceOf(vv1)).to.eq(amount);
-        let segment = amount.div(2);
-        await locked.connect(a).delegate('1', a.address);
-        await locked.connect(a).segmentAndDelegatePlans('1', [segment], [c.address]);
-        expect(await token.balanceOf(vv1)).to.eq(amount.sub(segment));
-        expect(await token.delegates(vv1)).to.eq(a.address);
-        expect(await token.balanceOf(locked.address)).to.eq(0);
-        let vv = await locked.votingVaults('2');
-        expect(await token.balanceOf(vv)).to.eq(segment);
-        expect(await token.delegates(vv)).to.eq(c.address);
-    })
-    it('combines two plans, the first with a vault and the second without and delegates the tokens', async () => {
-        let _s = await setup();
-        let locked = _s.voteLocked;
-        await token.approve(locked.address, C.E18_1000000.mul(10000));
-        await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-        await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-        const end = C.planEnd(start, amount, rate, period);
-        await locked.connect(a).setupVoting('1');
-        const vv = await locked.votingVaults('1');
-        expect(await token.balanceOf(vv)).to.eq(amount);
-        await locked.connect(a).combinePlans('1', '2');
-        expect(await token.balanceOf(vv)).to.eq(amount.mul(2));
-        expect((await locked.plans('2')).amount).to.eq(0);
-        expect((await locked.plans('2')).rate).to.eq(0);
-        expect((await locked.plans('2')).start).to.eq(0);
-        expect((await locked.plans('2')).period).to.eq(0);
-        expect((await locked.plans('2')).cliff).to.eq(0);
-        expect((await locked.plans('1')).amount).to.eq(amount.mul(2));
-        expect((await locked.plans('1')).start).to.eq(start);
-        expect((await locked.plans('1')).cliff).to.eq(cliff);
-        expect((await locked.plans('1')).period).to.eq(period);
-        const calcRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
-        expect((await locked.plans('1')).rate).to.eq(calcRate);
-        expect((await locked.planEnd('1'))).to.eq(end);
-        await locked.connect(a).delegate('1', b.address);
-        expect(await token.delegates(vv)).to.eq(b.address);
-    });
-    it('combines two plans, the first without a vault and the second with a vault and delegates the tokens', async () => {
-        // expecting survivor to be 2
-        let _s = await setup();
-        let locked = _s.voteLocked;
-        await token.approve(locked.address, C.E18_1000000.mul(10000));
-        await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-        await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-        const end = C.planEnd(start, amount, rate, period);
-        await locked.connect(a).setupVoting('2');
-        const vv = await locked.votingVaults('2');
-        expect(await token.balanceOf(vv)).to.eq(amount);
-        await locked.connect(a).combinePlans('1', '2');
-        expect(await token.balanceOf(vv)).to.eq(amount.mul(2));
-        expect((await locked.plans('1')).amount).to.eq(0);
-        expect((await locked.plans('1')).rate).to.eq(0);
-        expect((await locked.plans('1')).start).to.eq(0);
-        expect((await locked.plans('1')).period).to.eq(0);
-        expect((await locked.plans('1')).cliff).to.eq(0);
-        expect((await locked.plans('2')).amount).to.eq(amount.mul(2));
-        expect((await locked.plans('2')).start).to.eq(start);
-        expect((await locked.plans('2')).cliff).to.eq(cliff);
-        expect((await locked.plans('2')).period).to.eq(period);
-        const calcRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
-        expect((await locked.plans('2')).rate).to.eq(calcRate);
-        expect((await locked.planEnd('2'))).to.eq(end);
-        await locked.connect(a).delegate('2', b.address);
-        expect(await token.delegates(vv)).to.eq(b.address);
-    })
-    it('combines two plans with a vault and delegates the tokens', async () => {
-        //expecting survivor to be 1
-        let _s = await setup();
-        let locked = _s.voteLocked;
-        await token.approve(locked.address, C.E18_1000000.mul(10000));
-        await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-        await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-        const end = C.planEnd(start, amount, rate, period);
-        await locked.connect(a).setupVoting('1');
-        await locked.connect(a).setupVoting('2');
-        const vv = await locked.votingVaults('1');
-        const vv2 = await locked.votingVaults('2');
-        expect(await token.balanceOf(vv)).to.eq(amount);
-        expect(await token.balanceOf(vv2)).to.eq(amount);
-        await locked.connect(a).combinePlans('1', '2');
-        expect(await token.balanceOf(vv)).to.eq(amount.mul(2));
-        expect(await token.balanceOf(vv2)).to.eq(0);
-        expect((await locked.plans('2')).amount).to.eq(0);
-        expect((await locked.plans('2')).rate).to.eq(0);
-        expect((await locked.plans('2')).start).to.eq(0);
-        expect((await locked.plans('2')).period).to.eq(0);
-        expect((await locked.plans('2')).cliff).to.eq(0);
-        expect((await locked.plans('1')).amount).to.eq(amount.mul(2));
-        const calcRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
-        expect((await locked.plans('1')).rate).to.eq(calcRate);
-        expect((await locked.planEnd('1'))).to.eq(end);
-        expect((await locked.plans('1')).start).to.eq(start);
-        expect((await locked.plans('1')).cliff).to.eq(cliff);
-        expect((await locked.plans('1')).period).to.eq(period);
-        await locked.connect(a).delegate('1', b.address);
-        expect(await token.delegates(vv)).to.eq(b.address);
-    })
+  it('segements and delegates voting vault with no voting vault setup for original plan', async () => {
+    let _s = await setup();
+    let locked = _s.voteLocked;
+    await token.approve(locked.address, C.E18_1000000.mul(10000));
+    await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    expect(await token.balanceOf(locked.address)).to.eq(amount);
+    let segment = amount.div(2);
+    await locked.connect(a).segmentAndDelegatePlans('1', [segment], [c.address]);
+    expect(await locked.votingVaults('1')).to.eq(C.ZERO_ADDRESS);
+    expect(await token.balanceOf(locked.address)).to.eq(amount.sub(segment));
+    let vv = await locked.votingVaults('2');
+    expect(await token.balanceOf(vv)).to.eq(segment);
+    expect(await token.delegates(vv)).to.eq(c.address);
+  });
+  it('segments and delegates voting vault with an original voting vault setup', async () => {
+    let _s = await setup();
+    let locked = _s.voteLocked;
+    await token.approve(locked.address, C.E18_1000000.mul(10000));
+    await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    expect(await token.balanceOf(locked.address)).to.eq(amount);
+    await locked.connect(a).setupVoting('1');
+    expect(await token.balanceOf(locked.address)).to.eq(0);
+    const vv1 = await locked.votingVaults('1');
+    expect(await token.balanceOf(vv1)).to.eq(amount);
+    let segment = amount.div(2);
+    await locked.connect(a).delegate('1', a.address);
+    await locked.connect(a).segmentAndDelegatePlans('1', [segment], [c.address]);
+    expect(await token.balanceOf(vv1)).to.eq(amount.sub(segment));
+    expect(await token.delegates(vv1)).to.eq(a.address);
+    expect(await token.balanceOf(locked.address)).to.eq(0);
+    let vv = await locked.votingVaults('2');
+    expect(await token.balanceOf(vv)).to.eq(segment);
+    expect(await token.delegates(vv)).to.eq(c.address);
+  });
+  it('combines two plans, the first with a vault and the second without and delegates the tokens', async () => {
+    let _s = await setup();
+    let locked = _s.voteLocked;
+    await token.approve(locked.address, C.E18_1000000.mul(10000));
+    await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    const end = C.planEnd(start, amount, rate, period);
+    await locked.connect(a).setupVoting('1');
+    const vv = await locked.votingVaults('1');
+    expect(await token.balanceOf(vv)).to.eq(amount);
+    await locked.connect(a).combinePlans('1', '2');
+    expect(await token.balanceOf(vv)).to.eq(amount.mul(2));
+    expect((await locked.plans('2')).amount).to.eq(0);
+    expect((await locked.plans('2')).rate).to.eq(0);
+    expect((await locked.plans('2')).start).to.eq(0);
+    expect((await locked.plans('2')).period).to.eq(0);
+    expect((await locked.plans('2')).cliff).to.eq(0);
+    expect((await locked.plans('1')).amount).to.eq(amount.mul(2));
+    expect((await locked.plans('1')).start).to.eq(start);
+    expect((await locked.plans('1')).cliff).to.eq(cliff);
+    expect((await locked.plans('1')).period).to.eq(period);
+    const calcRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
+    expect((await locked.plans('1')).rate).to.eq(calcRate);
+    expect(await locked.planEnd('1')).to.eq(end);
+    await locked.connect(a).delegate('1', b.address);
+    expect(await token.delegates(vv)).to.eq(b.address);
+  });
+  it('combines two plans, the first without a vault and the second with a vault and delegates the tokens', async () => {
+    // expecting survivor to be 2
+    let _s = await setup();
+    let locked = _s.voteLocked;
+    await token.approve(locked.address, C.E18_1000000.mul(10000));
+    await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    const end = C.planEnd(start, amount, rate, period);
+    await locked.connect(a).setupVoting('2');
+    const vv = await locked.votingVaults('2');
+    expect(await token.balanceOf(vv)).to.eq(amount);
+    await locked.connect(a).combinePlans('1', '2');
+    expect(await token.balanceOf(vv)).to.eq(amount.mul(2));
+    expect((await locked.plans('1')).amount).to.eq(0);
+    expect((await locked.plans('1')).rate).to.eq(0);
+    expect((await locked.plans('1')).start).to.eq(0);
+    expect((await locked.plans('1')).period).to.eq(0);
+    expect((await locked.plans('1')).cliff).to.eq(0);
+    expect((await locked.plans('2')).amount).to.eq(amount.mul(2));
+    expect((await locked.plans('2')).start).to.eq(start);
+    expect((await locked.plans('2')).cliff).to.eq(cliff);
+    expect((await locked.plans('2')).period).to.eq(period);
+    const calcRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
+    expect((await locked.plans('2')).rate).to.eq(calcRate);
+    expect(await locked.planEnd('2')).to.eq(end);
+    await locked.connect(a).delegate('2', b.address);
+    expect(await token.delegates(vv)).to.eq(b.address);
+  });
+  it('combines two plans with a vault and delegates the tokens', async () => {
+    //expecting survivor to be 1
+    let _s = await setup();
+    let locked = _s.voteLocked;
+    await token.approve(locked.address, C.E18_1000000.mul(10000));
+    await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    await locked.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    const end = C.planEnd(start, amount, rate, period);
+    await locked.connect(a).setupVoting('1');
+    await locked.connect(a).setupVoting('2');
+    const vv = await locked.votingVaults('1');
+    const vv2 = await locked.votingVaults('2');
+    expect(await token.balanceOf(vv)).to.eq(amount);
+    expect(await token.balanceOf(vv2)).to.eq(amount);
+    await locked.connect(a).combinePlans('1', '2');
+    expect(await token.balanceOf(vv)).to.eq(amount.mul(2));
+    expect(await token.balanceOf(vv2)).to.eq(0);
+    expect((await locked.plans('2')).amount).to.eq(0);
+    expect((await locked.plans('2')).rate).to.eq(0);
+    expect((await locked.plans('2')).start).to.eq(0);
+    expect((await locked.plans('2')).period).to.eq(0);
+    expect((await locked.plans('2')).cliff).to.eq(0);
+    expect((await locked.plans('1')).amount).to.eq(amount.mul(2));
+    const calcRate = C.calcCombinedRate(amount, amount, rate, rate, start, end, period);
+    expect((await locked.plans('1')).rate).to.eq(calcRate);
+    expect(await locked.planEnd('1')).to.eq(end);
+    expect((await locked.plans('1')).start).to.eq(start);
+    expect((await locked.plans('1')).cliff).to.eq(cliff);
+    expect((await locked.plans('1')).period).to.eq(period);
+    await locked.connect(a).delegate('1', b.address);
+    expect(await token.delegates(vv)).to.eq(b.address);
+  });
 };
 
 const votingVaultDelegatorTests = (vesting, params) => {
@@ -268,26 +267,42 @@ const votingVaultDelegatorTests = (vesting, params) => {
     expect(await token.delegates(votingVault)).to.eq(a.address);
     expect(await hedgey.lockedBalances(a.address, token.address)).to.eq(amount);
     expect(await token.delegates(votingVault)).to.eq(a.address);
-    expect(await hedgey.connect(a).approveDelegator(b.address, 1)).to.emit('DelegatorApproved').withArgs(a.address, b.address, 1);
-    expect(await hedgey.connect(b).delegate(1, b.address)).to.emit('DelegateChanged').withArgs(votingVault, a.address, b.address);
+    expect(await hedgey.connect(a).approveDelegator(b.address, 1))
+      .to.emit('DelegatorApproved')
+      .withArgs(a.address, b.address, 1);
+    expect(await hedgey.connect(b).delegate(1, b.address))
+      .to.emit('DelegateChanged')
+      .withArgs(votingVault, a.address, b.address);
     expect(await token.delegates(votingVault)).to.eq(b.address);
   });
   it('wallet A approves an operator with wallet C, who redelegates the tokens', async () => {
-    const votingVault = await hedgey.votingVaults(1)
-    expect(await hedgey.connect(a).setApprovalForAllDelegation(c.address, true)).to.emit('ApprovalForAllDelegation').withArgs(a.address, c.address, true);
-    expect(await hedgey.connect(c).approveDelegator(C.ZERO_ADDRESS, 1)).to.emit('DelegatorApproved').withArgs(a.address, C.ZERO_ADDRESS, 1);
+    const votingVault = await hedgey.votingVaults(1);
+    expect(await hedgey.connect(a).setApprovalForAllDelegation(c.address, true))
+      .to.emit('ApprovalForAllDelegation')
+      .withArgs(a.address, c.address, true);
+    expect(await hedgey.connect(c).approveDelegator(C.ZERO_ADDRESS, 1))
+      .to.emit('DelegatorApproved')
+      .withArgs(a.address, C.ZERO_ADDRESS, 1);
     await expect(hedgey.connect(b).delegate(1, c.address)).to.be.revertedWith('!delegator');
-    expect(await hedgey.connect(a).delegate(1, a.address)).to.emit('DelegateChanged').withArgs(votingVault, b.address, a.address);
+    expect(await hedgey.connect(a).delegate(1, a.address))
+      .to.emit('DelegateChanged')
+      .withArgs(votingVault, b.address, a.address);
     expect(await token.delegates(votingVault)).to.eq(a.address);
-    expect(await hedgey.connect(c).delegate(1, c.address)).to.emit('DelegateChanged').withArgs(votingVault, a.address, c.address);
+    expect(await hedgey.connect(c).delegate(1, c.address))
+      .to.emit('DelegateChanged')
+      .withArgs(votingVault, a.address, c.address);
     expect(await token.delegates(votingVault)).to.eq(c.address);
     expect(await hedgey.isApprovedForAllDelegation(a.address, c.address)).to.eq(true);
   });
   it('wallet C acts as approver to approve wallet D as a delegator', async () => {
-    const votingVault = await hedgey.votingVaults(1)
-    expect(await hedgey.connect(c).approveDelegator(d.address, 1)).to.emit('DelegatorApproved').withArgs(a.address, d.address, 1);
+    const votingVault = await hedgey.votingVaults(1);
+    expect(await hedgey.connect(c).approveDelegator(d.address, 1))
+      .to.emit('DelegatorApproved')
+      .withArgs(a.address, d.address, 1);
     expect(await hedgey.getApprovedDelegator(1)).to.eq(d.address);
-    expect(await hedgey.connect(d).delegate(1, d.address)).to.emit('DelegateChanged').withArgs(votingVault, c.address, d.address);
+    expect(await hedgey.connect(d).delegate(1, d.address))
+      .to.emit('DelegateChanged')
+      .withArgs(votingVault, c.address, d.address);
   });
   it('mints another token to wallet A and C can as operator delegate both plans', async () => {
     vesting
@@ -308,7 +323,52 @@ const votingVaultDelegatorTests = (vesting, params) => {
     expect(await hedgey.getApprovedDelegator(2)).to.eq(C.ZERO_ADDRESS);
     await expect(hedgey.connect(b).delegate(2, b.address)).to.be.revertedWith('!delegator');
   });
-}
+  it('delegates to the 0 address, then claims the full plan', async () => {
+    let now = BigNumber.from(await time.latest());
+    vesting
+      ? await hedgey.createPlan(a.address, token.address, amount, now, 0, amount, 1, admin.address, true)
+      : await hedgey.createPlan(a.address, token.address, amount, now, 0, amount, 1);
+    await hedgey.connect(a).delegate('3', C.ZERO_ADDRESS);
+    let vault = await hedgey.votingVaults(3);
+    expect(await token.balanceOf(vault)).to.eq(amount);
+    expect(await token.delegates(vault)).to.eq(C.ZERO_ADDRESS);
+    expect(await hedgey.connect(a).redeemPlans(['3']))
+      .to.emit('PlanRedeemed')
+      .withArgs('3', amount, 0, now.add(1));
+    expect((await hedgey.plans(3)).amount).to.eq(0);
+    expect(await token.balanceOf(vault)).to.eq(0);
+  });
+  it('delegates to the 0 address then revokes the full plan', async () => {
+    if (vesting) {
+      let now = BigNumber.from(await time.latest());
+      await hedgey.createPlan(a.address, token.address, amount, now.add(1000), cliff, 1, 1, admin.address, true);
+      await hedgey.connect(a).delegate('4', C.ZERO_ADDRESS);
+      let vault = await hedgey.votingVaults(4);
+      expect(await token.balanceOf(vault)).to.eq(amount);
+      expect(await token.delegates(vault)).to.eq(C.ZERO_ADDRESS);
+      expect(await hedgey.revokePlans(['4']))
+        .to.emit('PlanRevoked')
+        .withArgs('4', 0, amount);
+      expect(await token.balanceOf(vault)).to.eq(0);
+    }
+  });
+  it('delegates to the 0 address then transfers the NFT', async () => {
+    vesting
+      ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)
+      : await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
+    let tokenId = vesting ? '5' : '4';
+    await hedgey.connect(a).delegate(tokenId, C.ZERO_ADDRESS);
+    if (vesting) {
+      await hedgey.transferFrom(a.address, b.address, tokenId);
+    } else {
+      await hedgey.connect(a).transferFrom(a.address, b.address, tokenId);
+    }
+    await hedgey.connect(b).delegate(tokenId, b.address);
+    let vault = await hedgey.votingVaults(tokenId);
+    expect(await token.balanceOf(vault)).to.eq(amount);
+    expect(await token.delegates(vault)).to.eq(b.address);
+  });
+};
 
 const votingVaultErrorTests = (vesting) => {
   let s, admin, a, b, c, d, hedgey, token, dai, usdc;
@@ -374,7 +434,7 @@ const votingVaultErrorTests = (vesting) => {
     vesting
       ? await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period, admin.address, true)
       : await hedgey.createPlan(a.address, token.address, amount, start, cliff, rate, period);
-    await expect(hedgey.connect(a).delegatePlans(['4'], [a.address, b.address])).to.be.revertedWith('array error')
+    await expect(hedgey.connect(a).delegatePlans(['4'], [a.address, b.address])).to.be.revertedWith('array error');
   });
 };
 
