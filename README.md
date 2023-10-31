@@ -44,7 +44,6 @@ ERC721Delegate contract is a special iteration of the ERC721Enumerable extension
 
 There are technical documentation in this repository in the technical documentation folder that describe the contracts functions and uses, and technical requirements. For more information please visit [Hedgey Website](https://hedgey.finance)
 
-The Version1 of these contracts can be found with audit at: https://github.com/hedgey-finance/StreamVestingNFT (and audit: https://github.com/hedgey-finance/StreamVestingNFT/blob/master/audit/Hedgey_SC%20Audit%20Report_06042023_%5BSA-1070%5D.pdf).
 
 ## Testing
 Clone repository
@@ -64,26 +63,26 @@ npx hardhat run scripts/deploy.js --network <network-name>
 
 ## Testnet Deployments
 # Sepolia Network:   
-TokenVestingPlans: `0xF5b3b163B0DfDF3C4Be9265aE17C1915d9a15872`  
-VotingTokenVestingPlans: `0x4F0AA7Ce4C3d94b6256D109CaF6e843F78B3Ef96`
+TokenVestingPlans: `0x68b6986416c7A38F630cBc644a2833A0b78b3631`  
+VotingTokenVestingPlans: `0x8345Cfc7eB639a9178FA9e5FfdeBB62CCF5846A3`
 
-TokenLockupPlans: `0x3eB5A6935A68190f74e981092BDcCf1454646446`  
+TokenLockupPlans: `0xb49d0CD3D5290adb4aF1eBA7A6B90CdE8B9265ff`  
 VotingTokenLockupPlans: `0xB82b292C9e33154636fe8839fDb6d4081Da5c359`  
 
-TokenLockupPlans_Bound: `0x90bA665860E1F9934F0cF2575eB8eCac2E0E17Af`  
+TokenLockupPlans_Bound: `0xD7E7ba882a4533eC8C8C9fB933703a42627D4deA`  
 VotingTokenLockupPlans_Bound: `0x2cE4DC254a4B48824e084791147Ff7220F1A08a7`  
 
 BatchPlaner: `0xd8B085f666299E52f24e637aB1076ba5C2c38045`  
 ClaimCampaigns: `0x12E93d7A7D4DA488e512bb753181BCA4498d4c23`  
 
 # Goerli Network 
-TokenVestingPlans: `0x3eB5A6935A68190f74e981092BDcCf1454646446`  
-VotingTokenVestingPlans: `0xB82b292C9e33154636fe8839fDb6d4081Da5c359`
+TokenVestingPlans: `0x96f0ff39a815484a0E4313c8733e973048953e61`  
+VotingTokenVestingPlans: `0x3D0f8736B97Cd87e2006127EB58337AE6c1CECE1`
 
-TokenLockupPlans: `0x90bA665860E1F9934F0cF2575eB8eCac2E0E17Af`  
+TokenLockupPlans: `0x94e7Fb21976E4901B09900BCF9a061868DF8577e`  
 VotingTokenLockupPlans: `0x2cE4DC254a4B48824e084791147Ff7220F1A08a7`  
 
-TokenLockupPlans_Bound: `0xd8B085f666299E52f24e637aB1076ba5C2c38045`  
+TokenLockupPlans_Bound: `0x137580B22213464471deB228CC8Cc31250cC1F73`  
 VotingTokenLockupPlans_Bound: `0xc6229b2D6F3948d3500a161Ef0c586267dc3Ac43`  
 
 BatchPlaner: `0x3Ef93dDE3F8e5dA878E99d7125d1C7434FB07c54`    
@@ -104,7 +103,6 @@ The following networks have been deployed to mainnet contracts, at the same addr
 - Mantle
 - Aurora
 - Binance Smart Chain (BSC)
-- Boba
 - Harmony One
 - Evmos
 - OEC (OkEx Chain)
@@ -112,15 +110,15 @@ The following networks have been deployed to mainnet contracts, at the same addr
 - Public Goods Network (PGN)  
 - Linea Mainnet  
 
-TokenVestingPlans: `0xd240f76C57fB18196A864B8b06E9b168C98c4524`
+TokenVestingPlans: `0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`
 
-VotingTokenVestingPlans: `0x1b03D75094884714973f22867359dE4b81AF2F00`
+VotingTokenVestingPlans: `0x1bb64AF7FE05fc69c740609267d2AbE3e119Ef82`
 
-TokenLockupPlans: `0x1B24CAe1De08ec8b3Ce0C55F9eE30Db747fd72aE`
+TokenLockupPlans: `0x1961A23409CA59EEDCA6a99c97E4087DaD752486`
 
 VotingTokenLockupPlans: `0x73cD8626b3cD47B009E68380720CFE6679A3Ec3D`
 
-Bound-TokenLockupPlans: `0x040A92F07B65E6C2C10FFfaf91DdC50F3d7b4319`
+Bound-TokenLockupPlans: `0xA600EC7Db69DFCD21f19face5B209a55EAb7a7C0`
 
 Bound-VotingTokenLockupPlans: `0xdE8465D44eBfC761Ee3525740E06C916886E1aEB`
 
