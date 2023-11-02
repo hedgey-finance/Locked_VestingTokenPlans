@@ -109,6 +109,7 @@ The following networks have been deployed to mainnet contracts, at the same addr
 - Palm Network
 - Public Goods Network (PGN)  
 - Linea Mainnet  
+- Shimmer EVM
 
 TokenVestingPlans: `0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`
 

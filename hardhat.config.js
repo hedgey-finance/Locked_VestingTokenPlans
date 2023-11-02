@@ -123,6 +123,10 @@ module.exports = {
       url: process.env.LINEA_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
+    shimmer: {
+      url: process.env.SHIMMER_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
   },
   etherscan: {
     customChains: [
@@ -229,7 +233,15 @@ module.exports = {
           apiURL: 'https://www.oklink.com/api/explorer/v5/oktc/contract/verify',
           browserURL: 'https://www.oklink.com/oktc',
         }
-      }
+      },
+      {
+        network: 'shimmer',
+        chainId: 148,
+        urls: {
+          apiURL: 'https://explorer.evm.shimmer.network/api/',
+          browserURL: 'https://explorer.evm.shimmer.network/',
+        }
+      },
     ],
     apiKey: {
       sepolia: process.env.ETHERSCAN_APIKEY,
@@ -255,6 +267,7 @@ module.exports = {
       pgn: process.env.PGN_APIKEY,
       linea: process.env.LINEA_APIKEY,
       lineaTestnet: process.env.LINEA_APIKEY,
+      shimmer: process.env.SHIMMER_APIKEY,
     },
   },
 };
