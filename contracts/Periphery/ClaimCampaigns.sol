@@ -224,11 +224,7 @@ contract ClaimCampaigns is ReentrancyGuard {
       if (claimAmount % c.periods == 0) {
         rate = claimAmount / c.periods;
       } else {
-        if (claimAmount % (c.periods - 1) == 0) {
-          rate = claimAmount / c.periods + 1;
-        } else {
-          rate = claimAmount / (c.periods - 1);
-        }
+        rate = claimAmount / c.periods + 1;
       }
       uint256 start = c.start == 0 ? block.timestamp : c.start;
       if (campaign.tokenLockup == TokenLockup.Locked) {
