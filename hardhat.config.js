@@ -106,9 +106,9 @@ module.exports = {
       url: process.env.PALM_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
-    tomoChain: {
-      url: process.env.TOMOCHAIN_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    viction: {
+      url: process.env.VICTION_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY],
     },
     pgn: {
       url: process.env.PGN_URL,
@@ -203,11 +203,11 @@ module.exports = {
         }
       },
       {
-        network: 'tomochain',
+        network: 'viction',
         chainId: 88,
         urls: {
-          apiURL: '',
-          browserURL: 'https://tomoscan.io/',
+          apiURL: 'https://vicscan.xyz/api/contract/hardhat/verify',
+          browserURL: 'https://vicscan.xyz',
         }
       },
       {
@@ -268,6 +268,7 @@ module.exports = {
       linea: process.env.LINEA_APIKEY,
       lineaTestnet: process.env.LINEA_APIKEY,
       shimmer: process.env.SHIMMER_APIKEY,
+      viction: process.env.VICTION_APIKEY,
     },
   },
 };
