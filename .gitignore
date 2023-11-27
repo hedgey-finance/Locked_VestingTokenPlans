@@ -115,3 +115,5 @@ coverage.json
 segmentAlgos.js
 
 scripts/tokenDeploy.js
+scripts/tasks.js 
+scripts/claims_testing
