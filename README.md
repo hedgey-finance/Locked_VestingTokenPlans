@@ -110,6 +110,7 @@ The following networks have been deployed to mainnet contracts, at the same addr
 - Public Goods Network (PGN)  
 - Linea Mainnet  
 - Shimmer EVM
+- Polygon zkEVM
 
 TokenVestingPlans: `0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`
 
@@ -128,7 +129,8 @@ BatchPlanner: `0x3466EB008EDD8d5052446293D1a7D212cb65C646`
 ClaimCampaigns: `0xBc452fdC8F851d7c5B72e1Fe74DFB63bb793D511`    
 
 
-- Viction Chain
+- Viction Chain   
+
 TokenVestingPlans: `0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`
 
 VotingTokenVestingPlans: `0x1bb64AF7FE05fc69c740609267d2AbE3e119Ef82`

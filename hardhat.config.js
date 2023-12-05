@@ -25,7 +25,7 @@ module.exports = {
   networks: {
     sepolia: {
       url: process.env.SEPOLIA_URL,
-      accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY],
+      accounts: [process.env.TEST_DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
     goerli: {
       url: process.env.GOERLI_URL,
@@ -127,6 +127,10 @@ module.exports = {
       url: process.env.SHIMMER_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
+    zkEvm: {
+      url: process.env.ZKEVM_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    }
   },
   etherscan: {
     customChains: [
@@ -242,6 +246,14 @@ module.exports = {
           browserURL: 'https://explorer.evm.shimmer.network/',
         }
       },
+      {
+        network: 'zkEvm',
+        chainId: 1101,
+        urls: {
+          apiURL: 'https://api-zkevm.polygonscan.com/api',
+          browserURL: 'https://zkevm.polygonscan.com/',
+        }
+      }
     ],
     apiKey: {
       sepolia: process.env.ETHERSCAN_APIKEY,
@@ -269,6 +281,7 @@ module.exports = {
       lineaTestnet: process.env.LINEA_APIKEY,
       shimmer: process.env.SHIMMER_APIKEY,
       viction: process.env.VICTION_APIKEY,
+      zkEvm: process.env.ZKEVM_APIKEY
     },
   },
 };
