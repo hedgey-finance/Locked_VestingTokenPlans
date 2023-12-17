@@ -130,6 +130,14 @@ module.exports = {
     zkEvm: {
       url: process.env.ZKEVM_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
+    swissDLT: {
+      url: process.env.SWISSDLT_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
+    beraChainTestnet: {
+      url: process.env.BERACHAIN_TESTNET_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     }
   },
   etherscan: {
@@ -253,6 +261,22 @@ module.exports = {
           apiURL: 'https://api-zkevm.polygonscan.com/api',
           browserURL: 'https://zkevm.polygonscan.com/',
         }
+      },
+      {
+        network: 'swissDLT',
+        chainId: 94,
+        urls: {
+          apiURL: 'https://explorer.swissdlt.ch/api',
+          browserURL: 'https://explorer.swissdlt.ch/',
+        }
+      },
+      {
+        network: 'beraChainTestnet',
+        chainId: 2061,
+        urls: {
+          apiURL: 'https://scan.berachain-internal.com/api',
+          browserURL: 'https://scan.berachain-internal.com/'
+        }
       }
     ],
     apiKey: {
@@ -281,7 +305,9 @@ module.exports = {
       lineaTestnet: process.env.LINEA_APIKEY,
       shimmer: process.env.SHIMMER_APIKEY,
       viction: process.env.VICTION_APIKEY,
-      zkEvm: process.env.ZKEVM_APIKEY
+      zkEvm: process.env.ZKEVM_APIKEY,
+      swissDLT: process.env.SWISSDLT_APIKEY,
+      beraChainTestnet: process.env.BERACHAIN_TESTNET_APIKEY,
     },
   },
 };
