@@ -133,12 +133,8 @@ module.exports = {
     },
     swissDLT: {
       url: process.env.SWISSDLT_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY],
     },
-    beraChainTestnet: {
-      url: process.env.BERACHAIN_TESTNET_URL,
-      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
-    }
   },
   etherscan: {
     customChains: [
@@ -270,14 +266,6 @@ module.exports = {
           browserURL: 'https://explorer.swissdlt.ch/',
         }
       },
-      {
-        network: 'beraChainTestnet',
-        chainId: 2061,
-        urls: {
-          apiURL: 'https://scan.berachain-internal.com/api',
-          browserURL: 'https://scan.berachain-internal.com/'
-        }
-      }
     ],
     apiKey: {
       sepolia: process.env.ETHERSCAN_APIKEY,
@@ -307,7 +295,6 @@ module.exports = {
       viction: process.env.VICTION_APIKEY,
       zkEvm: process.env.ZKEVM_APIKEY,
       swissDLT: process.env.SWISSDLT_APIKEY,
-      beraChainTestnet: process.env.BERACHAIN_TESTNET_APIKEY,
     },
   },
 };
