@@ -129,7 +129,11 @@ BatchPlanner: `0x3466EB008EDD8d5052446293D1a7D212cb65C646`
 ClaimCampaigns: `0xBc452fdC8F851d7c5B72e1Fe74DFB63bb793D511`    
 
 
-- Viction Chain   
+
+Other Network addresses:      
+
+- Viction Chain
+- SwissDLT
 
 TokenVestingPlans: `0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`
 
@@ -146,4 +150,7 @@ Bound-VotingTokenLockupPlans: `0x38E74A3DA3bd27dd581d5948ba19F0f684a5272f`
 BatchPlanner: `0x5D3513EB3f889C8451BB8a1a02C23aFfD0CA64bE`
 
 ClaimCampaigns: `0xBc452fdC8F851d7c5B72e1Fe74DFB63bb793D511`    
+
+
+
   
