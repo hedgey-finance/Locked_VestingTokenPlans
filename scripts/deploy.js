@@ -17,7 +17,7 @@ async function deployNFTContract(artifact, args, uriBase) {
 
 async function deployPeriphery() {
   const wallets = await ethers.getSigners();
-  const wallet = wallets[0];
+  const wallet = wallets[1];
   const donationAddress = wallet.address;
   const Planner = await ethers.getContractFactory('BatchPlanner');
   const planner = await Planner.deploy();
@@ -62,6 +62,6 @@ const args = [
   ['Bound-VotingTokenLockupPlans', 'B-VTLP'],
 ];
 const uri = 'https://dynamic-nft.hedgey.finance/';
-const network = 'zkevm/'
+const network = 'mode/'
 
 deployAll(artifacts, args, uri, network);

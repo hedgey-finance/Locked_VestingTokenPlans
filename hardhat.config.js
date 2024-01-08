@@ -135,6 +135,10 @@ module.exports = {
       url: process.env.SWISSDLT_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY],
     },
+    mode: {
+      url: process.env.MODE_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    }
   },
   etherscan: {
     customChains: [
@@ -266,6 +270,14 @@ module.exports = {
           browserURL: 'https://explorer.swissdlt.ch/',
         }
       },
+      {
+        network: 'mode',
+        chainId: 34443,
+        urls: {
+          apiURL: 'https://explorer.mode.network/api',
+          browserURL: 'https://explorer.mode.network/',
+        }
+      }
     ],
     apiKey: {
       sepolia: process.env.ETHERSCAN_APIKEY,
@@ -295,6 +307,7 @@ module.exports = {
       viction: process.env.VICTION_APIKEY,
       zkEvm: process.env.ZKEVM_APIKEY,
       swissDLT: process.env.SWISSDLT_APIKEY,
+      mode: process.env.MODE_APIKEY,
     },
   },
 };
