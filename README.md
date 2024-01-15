@@ -135,6 +135,7 @@ Other Network addresses:
 - Viction Chain
 - SwissDLT
 - Mode Network
+- Scroll   
 
 TokenVestingPlans: `0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`
 
@@ -151,6 +152,26 @@ Bound-VotingTokenLockupPlans: `0x38E74A3DA3bd27dd581d5948ba19F0f684a5272f`
 BatchPlanner: `0x5D3513EB3f889C8451BB8a1a02C23aFfD0CA64bE`
 
 ClaimCampaigns: `0xBc452fdC8F851d7c5B72e1Fe74DFB63bb793D511`    
+
+
+
+zkSync Era Mainnet:    
+
+TokenVestingPlans: `0x04d3b05BBACe50d6627139d55B1793E2c03C53F0`
+
+VotingTokenVestingPlans: `0xa824f42d4B6b3C51ab24dFdb268C232216a2D691`
+
+TokenLockupPlans: `0x1e290Ad7efc6E9102eCDB3D85dAB0e8e10cA690f`
+
+VotingTokenLockupPlans: `0x815a28bB9A5ea36C03Bc6B21072fb4e99D66b6f4`
+
+Bound-TokenLockupPlans: `0xa83DFE7365A250faB1c3e10451676Af5DEF36E08`
+
+Bound-VotingTokenLockupPlans: `0xc7EEFF556C4999169E96195b4091669C1ecA5C23`
+
+BatchPlanner: `0x0d3F97b0f3027abbDdf21792fFcA34eAd23c02eF`
+
+ClaimCampaigns: `0x78E193eF68a558b78A3d517Ee5E8D35180acA01e`   
 
 
 

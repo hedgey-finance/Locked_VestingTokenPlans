@@ -8,11 +8,16 @@ async function deployNFTContract(artifact, args, uriBase) {
   console.log(`new ${artifact} contract deployed to ${contract.address}`);
   let uri = `${uriBase}${contract.address.toLowerCase()}/`;
   const tx = await contract.updateBaseURI(uri);
-  await setTimeout(10000)
-  await run("verify:verify", {
+  // await setTimeout(10000)
+  // await run("verify:verify", {
+  //   address: contract.address,
+  //   constructorArguments: args,
+  // });
+  return {
     address: contract.address,
-    constructorArguments: args,
-  });
+    args: args,
+  };
+  
 }
 
 async function deployPeriphery() {
@@ -37,12 +42,24 @@ async function deployPeriphery() {
   });
 }
 
+async function verify(address, args) {
+  await run("verify:verify", {
+    address: address,
+    constructorArguments: args,
+  });
+}
+
 async function deployAll(artifacts, args, uri, network) {
+  const verifyArgs = [];
   const uriBase = `${uri}${network}`;
   for (let i = 0; i < artifacts.length; i++) {
-    await deployNFTContract(artifacts[i], args[i], uriBase);
+    let v = await deployNFTContract(artifacts[i], args[i], uriBase);
+    verifyArgs.push(v);
   }
   deployPeriphery();
+  for (let i = 0; i < verifyArgs.length; i++) {
+    await verify(verifyArgs[i].address, verifyArgs[i].args);
+  }
 }
 
 const artifacts = [
@@ -62,6 +79,17 @@ const args = [
   ['Bound-VotingTokenLockupPlans', 'B-VTLP'],
 ];
 const uri = 'https://dynamic-nft.hedgey.finance/';
-const network = 'mode/'
+const network = 'scroll/'
 
 deployAll(artifacts, args, uri, network);
+
+
+async function updateBaseURI(artifact, address, uriBase) {
+  const Contract = await ethers.getContractFactory(artifact);
+  const contract = Contract.attach(address);
+  let uri = `${uriBase}${address.toLowerCase()}/`;
+  await contract.updateBaseURI(uri);
+}
+
+// updateBaseURI('TokenLockupPlans_Bound', '0x06B6D0AbD9dfC7F04F478B089FD89d4107723264', 'https://dynamic-nft.hedgey.finance/berachainArtio/');
+

@@ -138,7 +138,19 @@ module.exports = {
     mode: {
       url: process.env.MODE_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
-    }
+    },
+    berachainArtio: {
+      url: process.env.BERACHAIN_ARTIO_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY, process.env.TEST_C],
+    },
+    scrollTestnet: {
+      url: process.env.SCROLL_TESTNET_URL,
+      accounts: [process.env.TOKEN_DEPLOYER],
+    },
+    scroll: {
+      url: process.env.SCROLL_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
   },
   etherscan: {
     customChains: [
@@ -277,6 +289,30 @@ module.exports = {
           apiURL: 'https://explorer.mode.network/api',
           browserURL: 'https://explorer.mode.network/',
         }
+      },
+      {
+        network: 'berachainArtio',
+        chainId: 80085,
+        urls: {
+          apiURL: 'https://api.routescan.io/v2/network/testnet/evm/80085/etherscan/api/',
+          browserURL: 'https://artio.beratrail.io/',
+        }
+      },
+      {
+        network: 'scrollTestnet',
+        chainId: 534351,
+        urls: {
+          apiURL: 'https://api-sepolia.scrollscan.com/api',
+          browserURL: 'https://sepolia.scrollscan.com/'
+        }
+      },
+      {
+        network: 'scroll',
+        chainId: 534352,
+        urls: {
+          apiURL: 'https://api.scrollscan.com/api',
+          browserURL: 'https://scrollscan.com/'
+        }
       }
     ],
     apiKey: {
@@ -308,6 +344,9 @@ module.exports = {
       zkEvm: process.env.ZKEVM_APIKEY,
       swissDLT: process.env.SWISSDLT_APIKEY,
       mode: process.env.MODE_APIKEY,
+      berachainArtio: process.env.BERACHAIN_ARTIO_APIKEY,
+      scrollTestnet: process.env.SCROLL_APIKEY,
+      scroll: process.env.SCROLL_APIKEY,
     },
   },
 };
