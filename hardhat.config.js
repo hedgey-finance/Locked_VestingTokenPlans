@@ -96,7 +96,7 @@ module.exports = {
     base: {
       url: process.env.BASE_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
-      gasPrice: 2000000000,
+      // gasPrice: 2500000000,
     },
     mantle: {
       url: process.env.MANTLE_URL,
@@ -151,6 +151,19 @@ module.exports = {
       url: process.env.SCROLL_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     },
+    flare: {
+      url: process.env.FLARE_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
+    ronin: {
+      url: process.env.RONIN_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+      gasPrice: 20000000000,
+    },
+    fraxtal: {
+      url: process.env.FRAXTAL_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    }
   },
   etherscan: {
     customChains: [
@@ -313,6 +326,30 @@ module.exports = {
           apiURL: 'https://api.scrollscan.com/api',
           browserURL: 'https://scrollscan.com/'
         }
+      },
+      {
+        network: "flare",
+        chainId: 14,
+        urls: {
+          apiURL: "https://api.routescan.io/v2/network/mainnet/evm/14/etherscan",
+          browserURL: "https://mainnet.flarescan.com"
+        }
+      },
+      {
+        network: "ronin",
+        chainId: 2020,
+        urls: {
+          apiURL: 'https://app.roninchain.com/api',
+          browserURL: 'https://app.roninchain.com/',
+        }
+      },
+      {
+        network: 'fraxtal',
+        chainId: 252,
+        urls: {
+          apiURL: 'https://api.fraxscan.com/api',
+          browserURL: 'https://fraxscan.com',
+        }
       }
     ],
     apiKey: {
@@ -347,6 +384,9 @@ module.exports = {
       berachainArtio: process.env.BERACHAIN_ARTIO_APIKEY,
       scrollTestnet: process.env.SCROLL_APIKEY,
       scroll: process.env.SCROLL_APIKEY,
+      flare: process.env.FLARE_APIKEY,
+      ronin: process.env.RONIN_APIKEY,
+      fraxtal: process.env.FRAXTAL_APIKEY,
     },
   },
 };
