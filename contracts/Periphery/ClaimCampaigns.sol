@@ -189,7 +189,6 @@ contract ClaimCampaigns is ReentrancyGuard {
       emit TokensDonated(id, donationCollector, campaign.token, donation.amount, donation.tokenLocker);
     }
     claimLockups[id] = claimLockup;
-    SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), claimLockup.tokenLocker, campaign.amount);
     campaigns[id] = campaign;
     emit ClaimLockupCreated(id, claimLockup);
     emit CampaignStarted(id, campaign);
@@ -227,6 +226,7 @@ contract ClaimCampaigns is ReentrancyGuard {
         rate = claimAmount / c.periods + 1;
       }
       uint256 start = c.start == 0 ? block.timestamp : c.start;
+      SafeERC20.safeIncreaseAllowance(IERC20(campaign.token), c.tokenLocker, claimAmount);
       if (campaign.tokenLockup == TokenLockup.Locked) {
         ILockupPlans(c.tokenLocker).createPlan(msg.sender, campaign.token, claimAmount, start, c.cliff, rate, c.period);
       } else {
