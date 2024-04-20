@@ -137,6 +137,9 @@ Other Network addresses:
 - Mode Network
 - Scroll   
 - Flare Network
+- Fraxtal  
+- Kava Network
+- Immutable zkEVM
 
 
 TokenVestingPlans: `0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`
