@@ -15,6 +15,9 @@ contract ClaimCampaigns is ReentrancyGuard {
   /// @notice the address that collects any donations given to the team
   address private donationCollector;
 
+  // whitelisted addressses that can be used for tokenLockers
+   mapping(address => bool) public tokenLockers;
+
   /// @dev an enum defining the different types of claims to be made
   /// @param Unlocked means that tokens claimed are liquid and not locked at all
   /// @param Locked means that the tokens claimed will be locked inside a TokenLockups plan
@@ -99,8 +102,11 @@ contract ClaimCampaigns is ReentrancyGuard {
     address tokenLocker
   );
 
-  constructor(address _donationCollector) {
+  constructor(address _donationCollector, address[] memory _tokenLockers) {
     donationCollector = _donationCollector;
+    for (uint256 i = 0; i < _tokenLockers.length; i++) {
+      tokenLockers[_tokenLockers[i]] = true;
+    }
   }
 
   /// @notice function to change the address the donations are sent to
@@ -169,7 +175,7 @@ contract ClaimCampaigns is ReentrancyGuard {
     require(campaign.amount > 0, '0_amount');
     require(campaign.end > block.timestamp, 'end error');
     require(campaign.tokenLockup != TokenLockup.Unlocked, '!locked');
-    require(claimLockup.tokenLocker != address(0), 'invalide locker');
+    require(tokenLockers[claimLockup.tokenLocker], 'invalide locker');
     TransferHelper.transferTokens(campaign.token, msg.sender, address(this), campaign.amount + donation.amount);
     if (donation.amount > 0) {
       if (donation.start > 0) {
