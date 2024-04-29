@@ -267,19 +267,19 @@ describe('Testing the transfer and non transfer functions', () => {
   transferTests();
 });
 
-describe('Testing the Claim Campaign tests', () => {
-  const paramsMatrix = [
-    { totalRecipients: 100, nodeA: 5, nodeB: 33, start: C.ZERO, period: C.DAY, cliff: C.ZERO, periods: 365 },
-    { totalRecipients: 10, nodeA: 5, nodeB: 12, start: C.ZERO, period: C.DAY, cliff: C.ZERO, periods: 365 },
-    { totalRecipients: 100, nodeA: 5, nodeB: 33, start: C.ZERO, period: C.MONTH, cliff: C.MONTH, periods: 12 },
-    { totalRecipients: 100, nodeA: 5, nodeB: 33, start: C.ZERO, period: C.ONE, cliff: C.MONTH, periods: C.DAY.mul(365) },
-  ];
-  paramsMatrix.forEach((params) => {
-    claimTests(0, false, params);
-    claimTests(1, true, params);
-    claimTests(1, false, params);
-    claimTests(2, true, params);
-    claimTests(2, false, params);
-  });
-  claimErrorTests();
-});
+// describe('Testing the Claim Campaign tests', () => {
+//   const paramsMatrix = [
+//     { totalRecipients: 100, nodeA: 5, nodeB: 33, start: C.ZERO, period: C.DAY, cliff: C.ZERO, periods: 365 },
+//     { totalRecipients: 10, nodeA: 5, nodeB: 12, start: C.ZERO, period: C.DAY, cliff: C.ZERO, periods: 365 },
+//     { totalRecipients: 100, nodeA: 5, nodeB: 33, start: C.ZERO, period: C.MONTH, cliff: C.MONTH, periods: 12 },
+//     { totalRecipients: 100, nodeA: 5, nodeB: 33, start: C.ZERO, period: C.ONE, cliff: C.MONTH, periods: C.DAY.mul(365) },
+//   ];
+//   paramsMatrix.forEach((params) => {
+//     claimTests(0, false, params);
+//     claimTests(1, true, params);
+//     claimTests(1, false, params);
+//     claimTests(2, true, params);
+//     claimTests(2, false, params);
+//   });
+//   claimErrorTests();
+// });

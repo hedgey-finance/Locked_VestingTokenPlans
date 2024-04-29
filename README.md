@@ -29,12 +29,15 @@ Contracts that hold tokens owned by end users, which each amount of tokens vesti
 
 Intermediary Contracts that temporarily hold tokens or route them from creators to beneficiaries: 
 - BatchPlanner.sol: Contract for creating multiple vesting or lockup plans at the same time in a large batch. A simple contract to assist with generating many NFT vesting and lockup plans in a single transaction
-- ClaimCampaigns.sol: Contract for creating a community token claim distribution, which stores tokens on behalf of the creator before the claim process, when tokens are distributed to the claimants. Interfaces with the Vesting and Lockup plans so that claim distributions can distribute locked or vesting tokens, or unlocked liquid tokens. 
+
+
+## CLAIM CAMPAIGN UPDATE
+The Claim Campaign contract was exploited in this repository, and while updates have been pushed to resolve the exploit, the current ClaimCampaigns.sol contract is Not audited and not for production use. It is not deployed or maintained by the Hedgey app or team. 
 
 ## Repository Navigation
 The smart contracts are all located in the ./contracts folder. The Final End User contracts are in the ./contracts/LockupPlans and ./contracts/VestingPlans folders. The lockup plan contracts are in the LockupPlans folder, and vesting plan contracts in the VestingPlans folder. The on-chain voting optimized contracts are named with Voting in the contract name, while the snapshot optimized contracts do not contain this explicit word. 
 
-Periphery Contracts are used in addition to the core for users to quickly create and distribute multiple plans at the same time, either by direct distribution using the BatchPlanner, or via an upload and claim method via the ClaimCampaigner. 
+Periphery Contracts are used in addition to the core for users to quickly create and distribute multiple plans at the same time, either by direct distribution using the BatchPlanner
 
 The Plan contracts use some shared contracts for NFT uri admin at deployment, on-chain voting vault contract. 
 
@@ -73,20 +76,8 @@ TokenLockupPlans_Bound: `0xD7E7ba882a4533eC8C8C9fB933703a42627D4deA`
 VotingTokenLockupPlans_Bound: `0x2cE4DC254a4B48824e084791147Ff7220F1A08a7`  
 
 BatchPlanner: `0xd8B085f666299E52f24e637aB1076ba5C2c38045`  
-ClaimCampaigns: `0x0DAC6eFac20e6372c6A3Ef091D3f265b6c6123c3`  
+ 
 
-# Goerli Network 
-TokenVestingPlans: `0x96f0ff39a815484a0E4313c8733e973048953e61`  
-VotingTokenVestingPlans: `0x3D0f8736B97Cd87e2006127EB58337AE6c1CECE1`
-
-TokenLockupPlans: `0x94e7Fb21976E4901B09900BCF9a061868DF8577e`  
-VotingTokenLockupPlans: `0x2cE4DC254a4B48824e084791147Ff7220F1A08a7`  
-
-TokenLockupPlans_Bound: `0x137580B22213464471deB228CC8Cc31250cC1F73`  
-VotingTokenLockupPlans_Bound: `0xc6229b2D6F3948d3500a161Ef0c586267dc3Ac43`  
-
-BatchPlanner: `0x3Ef93dDE3F8e5dA878E99d7125d1C7434FB07c54`    
-ClaimCampaigns: `0x4adD12903B4A425dbfb8799990273AA6027108eC`  
 
 ## Mainnet Deployments
 
@@ -126,7 +117,7 @@ Bound-VotingTokenLockupPlans: `0xdE8465D44eBfC761Ee3525740E06C916886E1aEB`
 
 BatchPlanner: `0x3466EB008EDD8d5052446293D1a7D212cb65C646`
 
-ClaimCampaigns: `0xBc452fdC8F851d7c5B72e1Fe74DFB63bb793D511`    
+
 
 
 
@@ -156,7 +147,7 @@ Bound-VotingTokenLockupPlans: `0x38E74A3DA3bd27dd581d5948ba19F0f684a5272f`
 
 BatchPlanner: `0x5D3513EB3f889C8451BB8a1a02C23aFfD0CA64bE`
 
-ClaimCampaigns: `0xBc452fdC8F851d7c5B72e1Fe74DFB63bb793D511`    
+ 
 
 
 
@@ -176,7 +167,7 @@ Bound-VotingTokenLockupPlans: `0xc7EEFF556C4999169E96195b4091669C1ecA5C23`
 
 BatchPlanner: `0x0d3F97b0f3027abbDdf21792fFcA34eAd23c02eF`
 
-ClaimCampaigns: `0x78E193eF68a558b78A3d517Ee5E8D35180acA01e`   
+  
 
 
 
