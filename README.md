@@ -129,8 +129,10 @@ Other Network addresses:
 - Scroll   
 - Flare Network
 - Fraxtal  
+- Zora 
 - Kava Network
 - Immutable zkEVM
+- IOTA EVM
 
 
 TokenVestingPlans: `0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`
