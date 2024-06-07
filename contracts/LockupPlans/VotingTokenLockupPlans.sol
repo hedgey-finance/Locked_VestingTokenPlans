@@ -328,6 +328,7 @@ contract VotingTokenLockupPlans is PlanDelegator, LockupStorage, ReentrancyGuard
   /// @param planId0 is the planId of the first plan in the combination
   /// @param planId1 is the planId of a second plan to be combined
   function _combinePlans(uint256 planId0, uint256 planId1) internal returns (uint256 survivingPlan) {
+    require(planId0 != planId1, 'same plan');
     require(ownerOf(planId0) == msg.sender, '!owner');
     require(ownerOf(planId1) == msg.sender, '!owner');
     Plan memory plan0 = plans[planId0];
