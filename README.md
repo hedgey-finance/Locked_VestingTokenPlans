@@ -31,8 +31,12 @@ Intermediary Contracts that temporarily hold tokens or route them from creators 
 - BatchPlanner.sol: Contract for creating multiple vesting or lockup plans at the same time in a large batch. A simple contract to assist with generating many NFT vesting and lockup plans in a single transaction
 
 
+
 ## CLAIM CAMPAIGN UPDATE
 The Claim Campaign contract was exploited in this repository, and while updates have been pushed to resolve the exploit, the current ClaimCampaigns.sol contract is Not audited and not for production use. It is not deployed or maintained by the Hedgey app or team. 
+
+## AUDIT UPDATE
+Contracts deployed to production match commit hash `91b4c17f0b98f99c2d38f117816cc17a040a17b2` and seen on the Contract Freeze & Production Deploy release in this repository. There were 3 subsequent audits to this contract freeze, with no critical, major, high or medium findings. However one small change has been updated into the current commit hash that impacts TokenLockupPlans.sol and VotingTokenLockupPlans.sol, related to the _combinePlans() method, that acts as a guardrail so that the same plan cannot be combined with itself (which would accidentally burn the lockup NFT and burn the plan, thus leaving tokens stuck in the contract without an owner). The newest commit hash with the second release will be used for future production deployments, which as of this date June 11, 2024 there are none.
 
 ## Repository Navigation
 The smart contracts are all located in the ./contracts folder. The Final End User contracts are in the ./contracts/LockupPlans and ./contracts/VestingPlans folders. The lockup plan contracts are in the LockupPlans folder, and vesting plan contracts in the VestingPlans folder. The on-chain voting optimized contracts are named with Voting in the contract name, while the snapshot optimized contracts do not contain this explicit word. 
