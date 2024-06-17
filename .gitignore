@@ -119,3 +119,4 @@ scripts/tasks.js
 scripts/claims_testing
 
 flattened
+contracts/test/TokenDeployer.sol
