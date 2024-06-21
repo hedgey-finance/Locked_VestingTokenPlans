@@ -171,6 +171,10 @@ module.exports = {
     zora: {
       url: process.env.ZORA_URL,
       accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
+    },
+    fevm: {
+      url: process.env.FEVM_URL,
+      accounts: [process.env.DEPLOYER_PRIVATE_KEY, process.env.NEW_CLAIM_PRIVATE_KEY, process.env.TOKEN_DEPLOYER],
     }
   },
   etherscan: {
@@ -375,6 +379,14 @@ module.exports = {
           browserURL: 'https://explorer.zora.energy',
         },
       },
+      {
+        network: 'fevm',
+        chainId: 314,
+        urls: {
+          apiURL: 'https://filfox.info/api/v1',
+          browserURL: 'https://filfox.info/en',
+        },
+      }
     ],
     apiKey: {
       sepolia: process.env.ETHERSCAN_APIKEY,
@@ -413,6 +425,7 @@ module.exports = {
       fraxtal: process.env.FRAXTAL_APIKEY,
       iota: process.env.IOTA_APIKEY,
       zora: process.env.ZORA_APIKEY,
+      fevm: process.env.FEVM_APIKEY,
     },
   },
 };
