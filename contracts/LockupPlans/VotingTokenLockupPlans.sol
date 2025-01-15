@@ -20,7 +20,7 @@ import '../sharedContracts/LockupStorage.sol';
 /// 3. Governance optimized for on-chain voting: These are built to allow beneficiaries to vote with their unvested tokens on chain with the standard ERC20Votes contract, as well as on snapshot
 /// 4. Beneficiary Claims: Beneficiaries get to choose when to claim their tokens, and can claim partial amounts that are less than the amount they have unlocked for tax optimization
 /// 5. Segmenting plans: Beneficiaries can segment a single lockup into  smaller chunks for subdelegation of tokens, or to use in defi with smaller chunks
-/// 6. Combingin Plans: Beneficiaries can combine plans that have the same details in one larger chunk for easier bulk management
+/// 6. Combining Plans: Beneficiaries can combine plans that have the same details in one larger chunk for easier bulk management
 contract VotingTokenLockupPlans is PlanDelegator, LockupStorage, ReentrancyGuard, URIAdmin {
   /// @notice uses counters for incrementing token IDs which are the planIds
   using Counters for Counters.Counter;
@@ -91,7 +91,7 @@ contract VotingTokenLockupPlans is PlanDelegator, LockupStorage, ReentrancyGuard
     _redeemPlans(planIds, redemptionTime);
   }
 
-  /// @notice this function will redeem all plans owned by a single wallet - useful for custodians or other intermeidaries that do not have the ability to lookup individual planIds
+  /// @notice this function will redeem all plans owned by a single wallet - useful for custodians or other intermediaries that do not have the ability to lookup individual planIds
   /// @dev this will iterate through all of the plans owned by the wallet based on the ERC721Enumerable backbone, and redeem each one with a redemption time of the current block.timestamp
   function redeemAllPlans() external nonReentrant {
     uint256 balance = balanceOf(msg.sender);
@@ -105,7 +105,7 @@ contract VotingTokenLockupPlans is PlanDelegator, LockupStorage, ReentrancyGuard
 
   /// @notice function for an owner of a lockup plan to segment a single plan into multiple chunks; segments.
   /// @dev the single plan can be divided up into many segments in this transaction, but care must be taken to ensure that the array is processed in a proper order
-  /// if the tokens are send in the wrong order the function will revert becuase the amount of the segment could be larger than the original plan.
+  /// if the tokens are send in the wrong order the function will revert because the amount of the segment could be larger than the original plan.
   /// this function iterates through the segment amounts and breaks up the same original plan into smaller sizes
   /// each time a segment happens it is always with the single planId, which will generate a new NFT for each new segment, and the original plan is updated in storage
   /// the original plan amount newPlanAmount + segmentAmount && original plan Rate = newPlanRate + segmentRate
@@ -124,7 +124,7 @@ contract VotingTokenLockupPlans is PlanDelegator, LockupStorage, ReentrancyGuard
     }
   }
 
-  /// @notice this function combines the functionality of segmenting plans and then immediately delegating the new semgent plans to a delegate address
+  /// @notice this function combines the functionality of segmenting plans and then immediately delegating the new segment plans to a delegate address
   /// @dev this function does NOT delegate the original planId at all, it will only delegate the newly create segments
   /// if the plan has a Voting Vault, it will create a new voting vault for each segment, and then delegate the tokens in the voting vault to the delegatee address
   /// @param planId is the plan that will be segmented (and not delegated)
