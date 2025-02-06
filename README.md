@@ -140,6 +140,12 @@ Other Network addresses:
 - Filecoin EVM
 - RARI Mainnet
 - Fluence Network
+- Peaq Network
+- Blast Network
+- Telos EVM
+- Worldchain
+- Berachain
+- PEAQ
 
 
 TokenVestingPlans: `0x2CDE9919e81b20B4B33DD562a48a84b54C48F00C`
