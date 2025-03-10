@@ -11,8 +11,8 @@ Lockup plans are not revokable, but are by default transferable.
 
 The plans super powers include: 
   - the ability to partially redeem tokens (as opposed to redeeming the entire unlocked amount)
-  - Voting with locked and unvested tokens (there is a Snapshot optimized and a On-chain governance optimized contract)
-  - Ability to break up lockup plans into smaller segements, and then recombine them (for sub-delegation of voting, or selling in OTC secondary markets)
+  - Voting with locked and unvested tokens (there is a Snapshot optimized and an On-chain governance optimized contract)
+  - Ability to break up lockup plans into smaller segments, and then recombine them (for sub-delegation of voting, or selling in OTC secondary markets)
 
 
 ## Contracts Overview
@@ -49,7 +49,7 @@ The core storage for the lockup and vesting plans is in the ./contracts/sharedCo
 
 ERC721Delegate contract is a special iteration of the ERC721Enumerable extension that enables users to delegate their NFT to another wallet, which is optimized for snapshot voting strategies. The snapshot optimized contracts inherit the ERC721Delegate, while the on-chain voting contracts inherit the ERC721Enumerable for gas savings and efficiencies. 
 
-There are technical documentation in this repository in the technical documentation folder that describe the contracts functions and uses, and technical requirements. For more information please visit [Hedgey Website](https://hedgey.finance)
+There are technical documentation in this repository in the technical documentation folder that describes the contracts functions and uses, and technical requirements. For more information please visit [Hedgey Website](https://hedgey.finance)
 
 
 ## Testing
